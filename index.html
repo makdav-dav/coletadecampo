@@ -736,6 +736,17 @@ async function enqueue(item) {
   drainQueue();
 }
 
+/* Remove itens pendentes da fila que se refiram a um id específico,
+   evitando enviar inserts órfãos após o usuário excluir localmente. */
+async function cancelarPendentes(matcher) {
+  const itens = await idbAll('fila');
+  for (const it of itens) if (matcher(it)) {
+    if (it.tipo === 'foto' && it.blobId) await idbDel('blobs', it.blobId);
+    await idbDel('fila', it.id);
+  }
+  atualizarBadgeFila();
+}
+
 /* ── DRIVE: upload multipart; pasta criada pelo app (escopo drive.file) ── */
 async function pastaDrive() {
   const salva = localStorage.getItem('drive_folder_ok');
@@ -1573,6 +1584,24 @@ async function salvarEspaco() {
   ['es-nome','es-end','es-bairro','es-obs'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('jard-form').style.display = 'none';
   abrirEspaco(esp.id_espaco);
+}
+
+async function excluirEspaco(id) {
+  const e = cacheEspacos().find(x => x.id_espaco === id);
+  if (!e) return;
+  if (!confirm(`Excluir "${e.nome}"${e.codigo ? ' (' + e.codigo + ')' : ''} e todos os seus canteiros?\n\nEssa ação não pode ser desfeita.`)) return;
+  await cancelarPendentes(it =>
+    (it.tipo === 'insert' && it.tabela === 'jard_espacos' && it.dados?.id_espaco === id) ||
+    (it.tipo === 'insert' && it.tabela === 'jard_canteiros' && it.dados?.id_espaco === id) ||
+    (it.tipo === 'foto' && it.entidade === 'jard_espaco' && it.idEntidade === id)
+  );
+  await enqueue({ tipo: 'delete', tabela: 'jard_espacos', filter: { id_espaco: 'eq.' + id } });
+  localStorage.setItem('cache_espacos', JSON.stringify(cacheEspacos().filter(x => x.id_espaco !== id)));
+  sessionStorage.removeItem('cts_' + id);
+  const atual = espAtual();
+  if (atual && atual.id_espaco === id) localStorage.removeItem('esp_atual');
+  renderJardLista();
+  showToast('Espaço excluído.', 'success');
 }
 
 function renderJardLista() {
