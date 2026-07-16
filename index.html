@@ -672,7 +672,7 @@
 
 <div id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
 <script>
 /* ================================================================
    SMMACL Campo — núcleo: Supabase auth + REST, Drive p/ fotos
@@ -702,6 +702,7 @@ function showToast(msg, type='info') {
 
 /* ── AUTH via Supabase (Google OAuth c/ escopo do Drive) ── */
 function handleAuth() {
+  if (!sb) { showToast('Sem conexão com a biblioteca do banco. Verifique a rede e recarregue.', 'error'); return; }
   if (session) {
     sb.auth.signOut().then(() => {
       session = null; providerToken = null; providerTokenExp = 0;
@@ -741,7 +742,29 @@ async function onSessionReady() {
   drainQueue();
 }
 
+/* Erros globais viram toast visível — nada de falha silenciosa */
+window.addEventListener('error', e => {
+  try { showToast('Erro: ' + (e.message || 'desconhecido'), 'error'); } catch(_) {}
+});
+window.addEventListener('unhandledrejection', e => {
+  try { showToast('Erro: ' + (e.reason?.message || e.reason || 'desconhecido'), 'error'); } catch(_) {}
+});
+
+async function aguardarSupabaseLib(ms) {
+  const fim = Date.now() + ms;
+  while (Date.now() < fim) {
+    if (typeof supabase !== 'undefined') return true;
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return false;
+}
+
 async function bootSupabase() {
+  const ok = await aguardarSupabaseLib(8000);
+  if (!ok) {
+    showToast('Biblioteca do banco não carregou (rede bloqueou cdn.jsdelivr.net?). O app segue em modo offline.', 'error');
+    return;
+  }
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
   });
@@ -1001,10 +1024,61 @@ window.addEventListener('offline', () => document.body.classList.add('offline'))
 if (!navigator.onLine) document.body.classList.add('offline');
 setInterval(() => drainQueue(), 45000);
 
-/* ── FOTOS: compressão + fila por formulário ── */
+/* ── FOTOS: compressão + carimbo (GPS, endereço, data/hora) ── */
 const fotosForm = { pt: [], es: [], ct: [] };
 
-function comprimirFoto(file) {
+/* Geocodificação reversa (OpenStreetMap/Nominatim) com cache e timeout curto */
+const endCache = {};
+async function enderecoAproximado(lat, lng) {
+  if (!navigator.onLine) return null;
+  const key = lat.toFixed(4) + ',' + lng.toFixed(4);
+  if (endCache[key] !== undefined) return endCache[key];
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3500);
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=pt-BR`,
+      { signal: ctrl.signal, headers: { 'Accept': 'application/json' } });
+    clearTimeout(t);
+    if (!r.ok) throw new Error('geo ' + r.status);
+    const j = await r.json();
+    const a = j.address || {};
+    const partes = [
+      [a.road, a.house_number].filter(Boolean).join(', '),
+      a.suburb || a.neighbourhood || a.village,
+      a.city || a.town || a.municipality
+    ].filter(Boolean);
+    const end = partes.join(' – ') || (j.display_name || '').split(',').slice(0, 3).join(',');
+    endCache[key] = end || null;
+    return endCache[key];
+  } catch(e) { endCache[key] = null; return null; }
+}
+
+function desenharCarimbo(ctx, w, h, linhas) {
+  if (!linhas.length) return;
+  const fs = Math.max(15, Math.round(h * 0.028));       // fonte proporcional
+  const lh = Math.round(fs * 1.35);
+  const pad = Math.round(fs * 0.8);
+  const alturaFaixa = pad * 2 + lh * linhas.length;
+  // faixa degradê no rodapé pra garantir contraste
+  const grad = ctx.createLinearGradient(0, h - alturaFaixa - lh, 0, h);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.35, 'rgba(0,0,0,0.45)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.72)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, h - alturaFaixa - lh, w, alturaFaixa + lh);
+  // texto branco com sombra
+  ctx.font = `600 ${fs}px -apple-system, 'Segoe UI', Roboto, sans-serif`;
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 1;
+  linhas.forEach((ln, i) => {
+    ctx.fillText(ln, pad, h - pad - (linhas.length - 1 - i) * lh, w - pad * 2);
+  });
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+}
+
+function comprimirFoto(file, carimbo) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -1014,13 +1088,31 @@ function comprimirFoto(file) {
       if (Math.max(w, h) > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
       const cv = document.createElement('canvas');
       cv.width = w; cv.height = h;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      const ctx = cv.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      cv.toBlob(b => b ? resolve(b) : reject(new Error('Falha na compressão')), 'image/jpeg', 0.82);
+      if (carimbo && carimbo.length) {
+        try { desenharCarimbo(ctx, w, h, carimbo); } catch(e) { console.warn('carimbo:', e.message); }
+      }
+      cv.toBlob(b => b ? resolve(b) : reject(new Error('Falha na compressão')), 'image/jpeg', 0.85);
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
     img.src = url;
   });
+}
+
+async function montarCarimbo() {
+  const ts = new Date();
+  const dataHora = ts.toLocaleDateString('pt-BR') + ' ' + ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const linhas = [];
+  if (gpsAtual) {
+    linhas.push(gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6) +
+      (gpsAtual.prec ? ' (±' + Math.round(gpsAtual.prec) + ' m)' : ''));
+    const end = await enderecoAproximado(gpsAtual.lat, gpsAtual.lng);
+    if (end) linhas.push(end);
+  }
+  linhas.push(dataHora + ' · SMMA Campo Largo');
+  return linhas;
 }
 
 async function addFoto(input, pfx) {
@@ -1028,7 +1120,8 @@ async function addFoto(input, pfx) {
   input.value = '';
   if (!file) return;
   try {
-    const blob = await comprimirFoto(file);
+    const carimbo = await montarCarimbo();
+    const blob = await comprimirFoto(file, carimbo);
     const id = uuid();
     fotosForm[pfx].push({ id, blob });
     const wrap = document.createElement('div');
@@ -2046,88 +2139,4 @@ function editarCanteiro(id) {
   document.getElementById('ct-form').scrollIntoView({ behavior: 'smooth' });
 }
 
-function coletarLinhasEspecies(idCanteiro) {
-  const out = [];
-  for (const row of document.querySelectorAll('.esp-row')) {
-    const sel = row.querySelector('.er-sel').value;
-    const nome = sel === '__livre__' ? row.querySelector('.er-livre').value.trim() : sel;
-    const mudas = parseInt(row.querySelector('.er-mudas').value || '0', 10);
-    if (!nome || !mudas) continue;
-    const cat = catalogo().find(c => c.nome_popular === nome);
-    out.push({
-      id_registro: uuid(), id_canteiro: idCanteiro,
-      id_especie: cat ? cat.id_especie : null,
-      especie_texto: nome,
-      qtd_mudas: mudas,
-      qtd_caixas: Math.round(mudas / CX_MUDAS * 10) / 10,
-      origem_qtd: row.querySelector('.er-mudas').dataset.origem || 'manual',
-      condicao: row.querySelector('.er-cond').value,
-      criado_em: agora(), criado_por: userEmail
-    });
-  }
-  return out;
-}
-
-function coletarCamposCanteiro() {
-  const { area, vias } = areaCanteiro();
-  return {
-    formato: formatoAtual,
-    comp_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-comp').value) || null) : null,
-    larg_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-larg').value) || null) : null,
-    diametro_m: formatoAtual === 'circular' ? (parseFloat(document.getElementById('ct-diam').value) || null) : null,
-    vias,
-    area_m2: area ? Math.round(area * 100) / 100 : null,
-    situacao: chipsMarcados('ct-situacao', 'on-green')[0] || null,
-    itens: chipsMarcados('ct-itens', 'on-green'),
-    obs: document.getElementById('ct-obs').value.trim() || null
-  };
-}
-
-async function salvarCanteiro() {
-  const e = espAtual();
-  if (!e) return showPage('jard');
-
-  if (canteiroEditando) {
-    // === EDIÇÃO ===
-    const id = canteiroEditando;
-    const campos = coletarCamposCanteiro();
-    const especies = coletarLinhasEspecies(id);
-    const fila = await idbAll('fila');
-    const it = fila.find(x => x.tipo === 'insert' && x.tabela === 'jard_canteiros' && x.dados?.id_canteiro === id);
-    // Espécies: substituição total (remove pendentes antigas / delete no servidor, insere as novas)
-    await cancelarPendentes(x => x.tipo === 'insert' && x.tabela === 'jard_especies' && x.dados?.id_canteiro === id);
-    if (it) {
-      it.dados = { ...it.dados, ...campos };
-      await idbPut('fila', it);
-    } else {
-      await enqueue({ tipo: 'update', tabela: 'jard_canteiros', filter: { id_canteiro: 'eq.' + id }, patch: campos });
-      await enqueue({ tipo: 'delete', tabela: 'jard_especies', filter: { id_canteiro: 'eq.' + id } });
-    }
-    for (const s of especies) await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: s });
-    await enfileirarFotos('ct', 'jard_canteiro', id, (e.codigo || 'JD') + '_c' + (canteirosDoEspaco.find(c => c.id_canteiro === id)?.seq || 'edit'));
-    const idx = canteirosDoEspaco.findIndex(c => c.id_canteiro === id);
-    if (idx >= 0) canteirosDoEspaco[idx] = { ...canteirosDoEspaco[idx], ...campos, especies };
-    const seqEditado = canteirosDoEspaco[idx]?.seq || '';
-    sairEdicaoCanteiro();
-    showToast('Canteiro ' + seqEditado + ' atualizado.', 'success');
-    return;
-  }
-
-  // === NOVO ===
-  const maxSeq = canteirosDoEspaco.reduce((m, c) => Math.max(m, c.seq || 0), 0);
-  const idCanteiro = uuid();
-  const campos = coletarCamposCanteiro();
-  const dados = {
-    id_canteiro: idCanteiro,
-    id_espaco: e.id_espaco,
-    seq: maxSeq + 1,
-    ...campos,
-    criado_em: agora(),
-    criado_por: userEmail
-  };
-  await enqueue({ tipo: 'insert', tabela: 'jard_canteiros', dados });
-  const especies = coletarLinhasEspecies(idCanteiro);
-  for (const s of especies) await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: s });
-  await enfileirarFotos('ct', 'jard_canteiro', idCanteiro, (e.codigo || 'JD') + '_c' + dados.seq);
-
-  canteirosDoEspaco.push({ ...dados, 
+funct
