@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2F6B3F">
+<title>SMMACL — Levantamento de Campo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #F2F5F0;
+    --surface: #ffffff;
+    --border: #DDE4DA;
+    --text-primary: #1B2620;
+    --text-secondary: #55645B;
+    --text-muted: #93A198;
+    --accent: #2F6B3F;
+    --accent-light: #E3F0E5;
+    --accent-mid: #5B9A6B;
+    --accent-dark: #1F4A2B;
+    --danger: #B6453A;
+    --danger-light: #F7E6E4;
+    --success: #2E7D5B;
+    --warning: #B07222;
+    --warning-light: #F7EDDD;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(31,74,43,0.10), 0 1px 2px rgba(31,74,43,0.05);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  header {
+    background: var(--accent-dark);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .hdr-left { display: flex; align-items: center; gap: 10px; }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hdr-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+  .hdr-sub { font-size: 11px; opacity: 0.75; }
+  #btn-auth {
+    background: rgba(255,255,255,0.14); color: #fff;
+    border: 1px solid rgba(255,255,255,0.25); border-radius: 20px;
+    padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  #btn-auth.connected { background: #fff; color: var(--accent-dark); }
+
+  main { padding: 16px; max-width: 640px; margin: 0 auto; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow);
+    margin-bottom: 12px;
+  }
+
+  .action-card {
+    display: flex; align-items: center; gap: 14px; cursor: pointer;
+    transition: transform .08s;
+  }
+  .action-card:active { transform: scale(0.985); }
+  .action-icon {
+    width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+    background: var(--accent-light); color: var(--accent-dark);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .action-title { font-size: 15px; font-weight: 700; }
+  .action-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 2px; }
+
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 12px 0 5px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%; padding: 12px; font-size: 16px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: #fff; color: var(--text-primary); font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-mid); border-color: var(--accent-mid); }
+  textarea { resize: vertical; min-height: 64px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 16px; font-size: 15px; font-weight: 700; cursor: pointer;
+    border-radius: var(--radius); border: 1px solid var(--border);
+    background: #fff; color: var(--text-primary); width: 100%; font-family: inherit;
+  }
+  .btn:active { transform: scale(0.985); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-danger-ghost { color: var(--danger); border-color: var(--danger); background: #fff; }
+  .btn-sm { padding: 9px 12px; font-size: 13px; width: auto; }
+  .btn:disabled { opacity: 0.45; pointer-events: none; }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 9px 14px; font-size: 13.5px; border-radius: 20px; cursor: pointer;
+    border: 1px solid var(--border); background: #fff; color: var(--text-secondary);
+    user-select: none;
+  }
+  .chip.on { background: var(--warning-light); border-color: var(--warning); color: var(--warning); font-weight: 700; }
+  .chip.on-green { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); font-weight: 700; }
+
+  .gps-box {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--accent-light); border-radius: var(--radius); padding: 10px 12px;
+    font-size: 13px; color: var(--accent-dark); margin-top: 12px;
+  }
+  .gps-box .gps-txt { flex: 1; }
+  .gps-coord { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .foto-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .foto-thumb {
+    width: 64px; height: 64px; border-radius: 8px; object-fit: cover;
+    border: 1px solid var(--border); position: relative;
+  }
+  .foto-add {
+    width: 64px; height: 64px; border-radius: 8px; cursor: pointer;
+    border: 1.5px dashed var(--accent-mid); background: #fff; color: var(--accent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; gap: 2px;
+  }
+  .foto-wrap { position: relative; }
+  .foto-x {
+    position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--danger); color: #fff; border: none;
+    font-size: 12px; line-height: 1; cursor: pointer;
+  }
+
+  .list-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 13px 14px; margin-bottom: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .li-title { font-size: 14.5px; font-weight: 700; }
+  .li-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .badge {
+    font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 12px;
+    background: var(--accent-light); color: var(--accent-dark); white-space: nowrap;
+  }
+  .badge.warn { background: var(--warning-light); color: var(--warning); }
+  .badge.red { background: var(--danger-light); color: var(--danger); }
+
+  .sticky-lev {
+    background: var(--accent-dark); color: #fff; border-radius: var(--radius-lg);
+    padding: 12px 14px; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .sticky-lev .sl-rua { font-size: 15px; font-weight: 700; }
+  .sticky-lev .sl-sub { font-size: 11.5px; opacity: 0.8; margin-top: 2px; }
+  .sl-badge { background: rgba(255,255,255,0.16); border-radius: 12px; padding: 5px 11px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+  .calc-box {
+    background: var(--accent-light); border-radius: var(--radius); padding: 11px 13px;
+    font-size: 13px; color: var(--accent-dark); margin-top: 10px;
+  }
+  .calc-box b { font-size: 15px; }
+
+  .empty { text-align: center; padding: 32px 16px; color: var(--text-muted); font-size: 13.5px; }
+
+  nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; padding-bottom: env(safe-area-inset-bottom);
+  }
+  .nav-btn {
+    flex: 1; padding: 9px 4px 7px; text-align: center; cursor: pointer;
+    font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+    background: none; border: none; font-family: inherit; position: relative;
+  }
+  .nav-btn svg { display: block; margin: 0 auto 3px; }
+  .nav-btn.active { color: var(--accent-dark); }
+  .nav-dot {
+    position: absolute; top: 6px; right: calc(50% - 18px);
+    min-width: 16px; height: 16px; border-radius: 8px; padding: 0 4px;
+    background: var(--warning); color: #fff; font-size: 10px; font-weight: 700;
+    display: none; align-items: center; justify-content: center;
+  }
+
+  #toast {
+    display: none; position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%);
+    background: var(--text-primary); color: #fff; padding: 11px 18px;
+    border-radius: 24px; font-size: 13.5px; font-weight: 600; z-index: 300;
+    max-width: 90vw; text-align: center;
+  }
+  #toast.error { background: var(--danger); }
+  #toast.success { background: var(--success); }
+
+  .offline-bar {
+    display: none; background: var(--warning-light); color: var(--warning);
+    font-size: 12.5px; font-weight: 700; text-align: center; padding: 7px;
+  }
+  body.offline .offline-bar { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-left">
+    <div class="logo-mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11z"/><path d="M12 8v6M9.5 10.5 12 8l2.5 2.5"/></svg>
+    </div>
+    <div>
+      <div class="hdr-title">SMMACL Campo</div>
+      <div class="hdr-sub">Meio Ambiente · Campo Largo</div>
+    </div>
+  </div>
+  <button id="btn-auth" onclick="handleAuth()"><span id="auth-label">Conectar</span></button>
+</header>
+<div class="offline-bar">Sem conexão — registros vão para a fila e sincronizam depois</div>
+
+<main>
+
+<!-- ============ INÍCIO ============ -->
+<section class="page active" id="page-home">
+  <h2 id="home-saudacao">Levantamento de campo</h2>
+  <div class="page-sub" id="home-status">Conecte-se ao BigQuery para sincronizar.</div>
+
+  <div class="card action-card" onclick="abrirArbo()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22v-7M12 15l-4-4M12 15l4-4"/><circle cx="12" cy="8" r="5"/></svg></div>
+    <div><div class="action-title">Arborização</div><div class="action-desc">Pontos de plantio por rua, com foto e impedimentos</div></div>
+  </div>
+
+  <div class="card action-card" onclick="abrirJard()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-5h6v5"/></svg></div>
+    <div><div class="action-title">Espaços de jardinagem</div><div class="action-desc">Praças, canteiros e rotatórias — com espécies e cálculo de mudas</div></div>
+  </div>
+
+  <div class="card action-card" onclick="showPage('fila'); renderFila()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></div>
+    <div><div class="action-title">Fila de sincronização</div><div class="action-desc" id="home-fila-desc">Nenhum registro pendente</div></div>
+  </div>
+</section>
+
+<!-- ============ ARBORIZAÇÃO: RUAS ============ -->
+<section class="page" id="page-arbo">
+  <h2>Arborização</h2>
+  <div class="page-sub">Levantamentos por rua. Toque numa rua para lançar pontos.</div>
+  <button class="btn btn-primary" onclick="novoLevantamento()">+ Nova rua</button>
+  <div id="arbo-form" style="display:none" class="card" >
+    <label>Nome da rua *</label><input type="text" id="lv-rua" placeholder="Rua Barão do Rio Branco">
+    <div class="row2">
+      <div><label>Quadra</label><input type="text" id="lv-quadra" placeholder="12"></div>
+      <div><label>Numeração</label><input type="text" id="lv-num" placeholder="1973–1577"></div>
+    </div>
+    <label>Bairro</label><input type="text" id="lv-bairro" placeholder="Centro">
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarLevantamento()">Iniciar levantamento</button>
+      <button class="btn btn-sm" onclick="document.getElementById('arbo-form').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <div id="arbo-lista" style="margin-top:14px"></div>
+</section>
+
+<!-- ============ ARBORIZAÇÃO: PONTO ============ -->
+<section class="page" id="page-ponto">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="pt-rua">—</div>
+      <div class="sl-sub" id="pt-rua-sub">—</div>
+    </div>
+    <div class="sl-badge" id="pt-seq">Ponto 1</div>
+  </div>
+
+  <div class="card">
+    <div class="gps-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+      <div class="gps-txt">
+        <div id="gps-status">Capturando GPS…</div>
+        <div class="gps-coord" id="gps-coord"></div>
+      </div>
+      <button class="btn btn-sm" onclick="capturarGPS()">Atualizar</button>
+    </div>
+
+    <label>Fotos do ponto</label>
+    <div class="foto-strip" id="pt-fotos">
+      <button class="foto-add" onclick="document.getElementById('pt-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="pt-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'pt')">
+
+    <label>Impedimentos no ponto</label>
+    <div class="chips" id="pt-imped"></div>
+    <input type="text" id="pt-imped-outro" placeholder="Descreva o outro impedimento" style="display:none; margin-top:8px">
+
+    <div class="row2" style="margin-top:4px">
+      <div>
+        <label>Espécie do plano</label>
+        <select id="pt-esp-plano"></select>
+      </div>
+      <div>
+        <label>Sugestão da equipe</label>
+        <select id="pt-esp-sug"></select>
+      </div>
+    </div>
+    <input type="text" id="pt-esp-livre" placeholder="Nome da espécie (livre)" style="display:none; margin-top:8px">
+
+    <label>Distância do ponto anterior (m)</label>
+    <input type="number" id="pt-dist" inputmode="decimal" step="0.5" placeholder="5">
+
+    <label>Observações</label>
+    <textarea id="pt-obs" placeholder="Ex.: tirar a existente e plantar a nova"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarPonto()">Salvar e próximo ponto</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-danger-ghost" onclick="encerrarRua()">Encerrar rua</button>
+      <button class="btn" onclick="showPage('arbo'); renderArboLista()">Voltar</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ JARDINAGEM: ESPAÇOS ============ -->
+<section class="page" id="page-jard">
+  <h2>Espaços de jardinagem</h2>
+  <div class="page-sub">Praças, canteiros, rotatórias e floreiras.</div>
+  <button class="btn btn-primary" onclick="novoEspaco()">+ Novo espaço</button>
+  <div id="jard-form" style="display:none" class="card">
+    <label>Nome do espaço *</label><input type="text" id="es-nome" placeholder="Praça da Polônia">
+    <label>Tipo</label>
+    <select id="es-tipo">
+      <option value="praca">Praça</option>
+      <option value="rotatoria">Rotatória</option>
+      <option value="canteiro_rua">Canteiro de rua</option>
+      <option value="floreira">Floreira</option>
+      <option value="jardim">Jardim</option>
+      <option value="outro">Outro</option>
+    </select>
+    <label>Endereço</label><input type="text" id="es-end" placeholder="Em frente à padaria Sabor do Trigo">
+    <label>Bairro</label><input type="text" id="es-bairro">
+    <div class="gps-box">
+      <div class="gps-txt">
+        <div id="es-gps-status">GPS não capturado</div>
+        <div class="gps-coord" id="es-gps-coord"></div>
+      </div>
+      <button class="btn btn-sm" onclick="capturarGPS('es')">Capturar</button>
+    </div>
+    <label>Fotos do espaço</label>
+    <div class="foto-strip" id="es-fotos">
+      <button class="foto-add" onclick="document.getElementById('es-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="es-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'es')">
+    <label>Observações</label><textarea id="es-obs"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarEspaco()">Salvar espaço</button>
+      <button class="btn btn-sm" onclick="document.getElementById('jard-form').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <div id="jard-lista" style="margin-top:14px"></div>
+</section>
+
+<!-- ============ JARDINAGEM: ESPAÇO DETALHE / CANTEIRO ============ -->
+<section class="page" id="page-espaco">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="ep-nome">—</div>
+      <div class="sl-sub" id="ep-sub">—</div>
+    </div>
+    <div class="sl-badge" id="ep-cod">JD</div>
+  </div>
+
+  <div id="ep-canteiros"></div>
+
+  <div class="card" id="ct-form">
+    <div class="action-title" style="margin-bottom:4px">Novo canteiro</div>
+    <label>Formato</label>
+    <div class="chips" id="ct-formato">
+      <span class="chip" data-v="retangular" onclick="setFormato(this)">Retangular</span>
+      <span class="chip" data-v="circular" onclick="setFormato(this)">Circular</span>
+      <span class="chip" data-v="coracao" onclick="setFormato(this)">Coração</span>
+      <span class="chip" data-v="irregular" onclick="setFormato(this)">Irregular</span>
+    </div>
+    <div class="row3" id="ct-dims-ret">
+      <div><label>Compr. (m)</label><input type="number" id="ct-comp" inputmode="decimal" step="0.1" oninput="calcArea()"></div>
+      <div><label>Larg. (m)</label><input type="number" id="ct-larg" inputmode="decimal" step="0.1" oninput="calcArea()"></div>
+      <div><label>Vias (x)</label><input type="number" id="ct-vias" inputmode="numeric" value="1" oninput="calcArea()"></div>
+    </div>
+    <div class="row2" id="ct-dims-circ" style="display:none">
+      <div><label>Diâmetro (m)</label><input type="number" id="ct-diam" inputmode="decimal" step="0.1" oninput="calcArea()"></div>
+      <div><label>Vias (x)</label><input type="number" id="ct-vias2" inputmode="numeric" value="1" oninput="calcArea()"></div>
+    </div>
+    <div id="ct-dims-livre" style="display:none">
+      <label>Área estimada (m²)</label><input type="number" id="ct-area-livre" inputmode="decimal" step="0.1" oninput="calcArea()">
+    </div>
+    <div class="calc-box" id="ct-calc" style="display:none"></div>
+
+    <label>Situação</label>
+    <div class="chips" id="ct-situacao">
+      <span class="chip" data-v="existente" onclick="pickOne(this)">Existente</span>
+      <span class="chip" data-v="criar" onclick="pickOne(this)">Criar</span>
+      <span class="chip" data-v="reformular" onclick="pickOne(this)">Reformular</span>
+    </div>
+
+    <label>Itens no canteiro</label>
+    <div class="chips" id="ct-itens"></div>
+
+    <label>Espécies</label>
+    <div id="ct-especies"></div>
+    <button class="btn btn-sm" style="margin-top:8px" onclick="addEspecieRow()">+ Adicionar espécie</button>
+
+    <label>Fotos do canteiro</label>
+    <div class="foto-strip" id="ct-fotos">
+      <button class="foto-add" onclick="document.getElementById('ct-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="ct-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'ct')">
+
+    <label>Observações</label><textarea id="ct-obs" placeholder="Ex.: reformular para redondo"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarCanteiro()">Salvar canteiro</button>
+      <button class="btn" onclick="showPage('jard'); renderJardLista()">Concluir espaço</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FILA ============ -->
+<section class="page" id="page-fila">
+  <h2>Fila de sincronização</h2>
+  <div class="page-sub" id="fila-sub">Registros aguardando envio ao BigQuery e ao Drive.</div>
+  <button class="btn btn-primary" onclick="drainQueue(true)">Sincronizar agora</button>
+  <div id="fila-lista" style="margin-top:14px"></div>
+</section>
+
+</main>
+
+<nav>
+  <button class="nav-btn active" data-p="home" onclick="navTo('home')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+    Início
+  </button>
+  <button class="nav-btn" data-p="arbo" onclick="navTo('arbo')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22v-7M12 15l-4-4M12 15l4-4"/><circle cx="12" cy="8" r="5"/></svg>
+    Arborização
+  </button>
+  <button class="nav-btn" data-p="jard" onclick="navTo('jard')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-5h6v5"/></svg>
+    Jardinagem
+  </button>
+  <button class="nav-btn" data-p="fila" onclick="navTo('fila')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+    Fila
+    <span class="nav-dot" id="fila-dot"></span>
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================================================================
+   SMMACL Campo — núcleo: Supabase auth + REST, Drive p/ fotos
+   ================================================================ */
+const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
+const CX_MUDAS = 15;            // 1 caixa = 15 mudas
+const ESPACAMENTO_M2 = 0.0225;  // 15 x 15 cm por muda
+
+let sb = null;
+let session = null;
+let providerToken = null;       // token do Google (só p/ Drive)
+let providerTokenExp = 0;
+let userEmail = localStorage.getItem('user_email') || null;
+let toastTimer = null;
+let syncing = false;
+
+/* ── TOAST ── */
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3200);
+}
+
+/* ── AUTH via Supabase (Google OAuth c/ escopo do Drive) ── */
+function handleAuth() {
+  if (session) {
+    sb.auth.signOut().then(() => {
+      session = null; providerToken = null; providerTokenExp = 0;
+      sessionStorage.removeItem('drive_token');
+      updateAuthUI(false);
+      showToast('Desconectado.', 'info');
+    });
+    return;
+  }
+  sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      scopes: 'https://www.googleapis.com/auth/drive.file',
+      redirectTo: window.location.origin + window.location.pathname,
+      queryParams: { prompt: 'consent' }
+    }
+  });
+}
+
+function updateAuthUI(connected) {
+  const btn = document.getElementById('btn-auth');
+  const lbl = document.getElementById('auth-label');
+  btn.classList.toggle('connected', connected);
+  lbl.textContent = connected ? (userEmail ? userEmail.split('@')[0] : 'Conectado') : 'Conectar';
+  document.getElementById('home-status').textContent = connected
+    ? 'Conectado. Registros sincronizam automaticamente.'
+    : 'Conecte-se para sincronizar. Dá pra trabalhar offline mesmo assim.';
+}
+
+function sessionValida() { return !!session; }
+function driveTokenValido() { return providerToken && Date.now() < providerTokenExp - 60000; }
+
+async function onSessionReady() {
+  updateAuthUI(true);
+  carregarCatalogo();
+  sincronizarContadorJD();
+  drainQueue();
+}
+
+async function bootSupabase() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
+  });
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (s) {
+    session = s;
+    userEmail = s.user?.email || userEmail;
+    if (userEmail) localStorage.setItem('user_email', userEmail);
+    if (s.provider_token) {
+      providerToken = s.provider_token;
+      providerTokenExp = Date.now() + 3300 * 1000; // 55 min de margem
+      sessionStorage.setItem('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
+    } else {
+      try {
+        const c = JSON.parse(sessionStorage.getItem('drive_token') || 'null');
+        if (c && Date.now() < c.e) { providerToken = c.t; providerTokenExp = c.e; }
+      } catch(e) {}
+    }
+  }
+  sb.auth.onAuthStateChange((event, s) => {
+    if (event === 'SIGNED_IN' && s) {
+      session = s;
+      userEmail = s.user?.email || userEmail;
+      if (userEmail) localStorage.setItem('user_email', userEmail);
+      if (s.provider_token) {
+        providerToken = s.provider_token;
+        providerTokenExp = Date.now() + 3300 * 1000;
+        sessionStorage.setItem('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
+      }
+      onSessionReady();
+    } else if (event === 'SIGNED_OUT') {
+      session = null; providerToken = null;
+      updateAuthUI(false);
+    }
+  });
+}
+
+/* ── SUPABASE REST helpers ── */
+async function sbFetch(path, opts = {}) {
+  if (!session) throw new Error('SEM_SESSION');
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: opts.method || 'GET',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + session.access_token,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=minimal',
+      ...(opts.headers || {})
+    },
+    body: opts.body
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    let msg = t;
+    try { const j = JSON.parse(t); msg = j.message || j.hint || t; } catch(e) {}
+    throw new Error(msg || ('HTTP ' + r.status));
+  }
+  const ct = r.headers.get('content-type') || '';
+  if (!ct.includes('json')) return null;
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+
+function limparPayload(d) {
+  return Object.fromEntries(Object.entries(d).filter(([k, v]) =>
+    v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)));
+}
+
+async function sbInsert(tabela, dados) {
+  await sbFetch(tabela, { method: 'POST', body: JSON.stringify(limparPayload(dados)) });
+}
+
+async function sbUpdate(tabela, filter, patch) {
+  const q = Object.entries(filter).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+  await sbFetch(tabela + '?' + q, { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+async function sbSelect(tabela, query) {
+  return sbFetch(tabela + (query ? '?' + query : ''), { prefer: 'return=representation' });
+}
+
+/* ── INDEXEDDB: fila offline ── */
+let idb = null;
+function abrirDB() {
+  return new Promise((resolve, reject) => {
+    if (idb) return resolve(idb);
+    const req = indexedDB.open('smmacl_app', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('fila')) db.createObjectStore('fila', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('blobs')) db.createObjectStore('blobs', { keyPath: 'id' });
+    };
+    req.onsuccess = e => { idb = e.target.result; resolve(idb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+function idbPut(store, obj) {
+  return abrirDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(obj);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  }));
+}
+function idbDel(store, id) {
+  return abrirDB().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(id);
+    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+  }));
+}
+function idbAll(store) {
+  return abrirDB().then(db => new Promise((res, rej) => {
+    const req = db.transaction(store).objectStore(store).getAll();
+    req.onsuccess = () => res(req.result || []); req.onerror = () => rej(req.error);
+  }));
+}
+function idbGet(store, id) {
+  return abrirDB().then(db => new Promise((res, rej) => {
+    const req = db.transaction(store).objectStore(store).get(id);
+    req.onsuccess = () => res(req.result); req.onerror = () => rej(req.error);
+  }));
+}
+
+function uuid() {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+function agora() { return new Date().toISOString(); }
+
+async function enqueue(item) {
+  item.id = item.id || uuid();
+  item.status = 'pendente';
+  item.criado_em = item.criado_em || agora();
+  await idbPut('fila', item);
+  atualizarBadgeFila();
+  drainQueue();
+}
+
+/* ── DRIVE: upload multipart; pasta criada pelo app (escopo drive.file) ── */
+async function pastaDrive() {
+  const salva = localStorage.getItem('drive_folder_ok');
+  if (salva) return salva;
+  if (!driveTokenValido()) throw new Error('SEM_TOKEN_DRIVE');
+  const meta = { name: 'SMMACL — Fotos de Campo', mimeType: 'application/vnd.google-apps.folder' };
+  const r = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + providerToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify(meta)
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error('Drive (criar pasta): ' + (t || r.status));
+  }
+  const j = await r.json();
+  localStorage.setItem('drive_folder_ok', j.id);
+  return j.id;
+}
+
+async function uploadDrive(blob, nome) {
+  if (!driveTokenValido()) throw new Error('SEM_TOKEN_DRIVE');
+  const folder = await pastaDrive();
+  const meta = { name: nome, parents: [folder] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob);
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + providerToken },
+    body: form
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error?.message || ('Drive HTTP ' + r.status));
+  }
+  return r.json();
+}
+
+/* ── FILA: drenagem ── */
+async function drainQueue(manual) {
+  if (syncing) return;
+  if (!navigator.onLine) { if (manual) showToast('Sem conexão de rede.', 'error'); atualizarBadgeFila(); return; }
+  if (!sessionValida())  { if (manual) showToast('Conecte-se primeiro (botão no topo).', 'error'); atualizarBadgeFila(); return; }
+  syncing = true;
+  try {
+    const itens = (await idbAll('fila')).sort((a, b) => a.criado_em.localeCompare(b.criado_em));
+    let ok = 0, falha = 0, driveIndisponivel = false;
+    for (const it of itens) {
+      try {
+        if (it.tipo === 'insert') {
+          await sbInsert(it.tabela, it.dados);
+        } else if (it.tipo === 'update') {
+          await sbUpdate(it.tabela, it.filter, it.patch);
+        } else if (it.tipo === 'foto') {
+          if (!driveTokenValido()) { driveIndisponivel = true; continue; }
+          const b = await idbGet('blobs', it.blobId);
+          if (b && b.blob) {
+            const up = await uploadDrive(b.blob, it.nomeArquivo);
+            await sbInsert('fotos', {
+              id_foto: it.idFoto, drive_file_id: up.id, web_link: up.webViewLink || null,
+              entidade: it.entidade, id_entidade: it.idEntidade,
+              criado_em: it.criado_em, criado_por: userEmail
+            });
+            await idbDel('blobs', it.blobId);
+          }
+        }
+        await idbDel('fila', it.id);
+        ok++;
+      } catch (e) {
+        if (e.message === 'SEM_SESSION') break;
+        if (e.message === 'SEM_TOKEN_DRIVE') { driveIndisponivel = true; continue; }
+        it.status = 'erro'; it.erro = e.message;
+        await idbPut('fila', it);
+        falha++;
+      }
+    }
+    if (ok) showToast(`${ok} registro(s) sincronizado(s).`, 'success');
+    if (falha && manual) showToast(`${falha} com erro — veja a fila.`, 'error');
+    if (driveIndisponivel && manual) showToast('Token do Drive expirou. Desconecte e conecte de novo para enviar fotos.', 'error');
+  } finally {
+    syncing = false;
+    atualizarBadgeFila();
+    if (document.getElementById('page-fila').classList.contains('active')) renderFila();
+  }
+}
+
+async function atualizarBadgeFila() {
+  const n = (await idbAll('fila')).length;
+  const dot = document.getElementById('fila-dot');
+  dot.style.display = n ? 'flex' : 'none';
+  dot.textContent = n;
+  document.getElementById('home-fila-desc').textContent =
+    n ? `${n} registro(s) aguardando sincronização` : 'Nenhum registro pendente';
+}
+
+window.addEventListener('online', () => { document.body.classList.remove('offline'); drainQueue(); });
+window.addEventListener('offline', () => document.body.classList.add('offline'));
+if (!navigator.onLine) document.body.classList.add('offline');
+setInterval(() => drainQueue(), 45000);
+
+/* ── FOTOS: compressão + fila por formulário ── */
+const fotosForm = { pt: [], es: [], ct: [] };
+
+function comprimirFoto(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1600;
+      let { width: w, height: h } = img;
+      if (Math.max(w, h) > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      cv.toBlob(b => b ? resolve(b) : reject(new Error('Falha na compressão')), 'image/jpeg', 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
+    img.src = url;
+  });
+}
+
+async function addFoto(input, pfx) {
+  const file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    const blob = await comprimirFoto(file);
+    const id = uuid();
+    fotosForm[pfx].push({ id, blob });
+    const wrap = document.createElement('div');
+    wrap.className = 'foto-wrap';
+    wrap.dataset.fid = id;
+    const im = document.createElement('img');
+    im.className = 'foto-thumb';
+    im.src = URL.createObjectURL(blob);
+    const x = document.createElement('button');
+    x.className = 'foto-x'; x.textContent = '×';
+    x.onclick = () => { fotosForm[pfx] = fotosForm[pfx].filter(f => f.id !== id); wrap.remove(); };
+    wrap.appendChild(im); wrap.appendChild(x);
+    document.getElementById(pfx + '-fotos').appendChild(wrap);
+  } catch (e) { showToast('Erro na foto: ' + e.message, 'error'); }
+}
+
+async function enfileirarFotos(pfx, entidade, idEntidade, rotulo) {
+  const lista = fotosForm[pfx].splice(0);
+  document.querySelectorAll('#' + pfx + '-fotos .foto-wrap').forEach(el => el.remove());
+  for (let i = 0; i < lista.length; i++) {
+    const f = lista[i];
+    await idbPut('blobs', { id: f.id, blob: f.blob });
+    await enqueue({
+      tipo: 'foto', blobId: f.id, idFoto: uuid(),
+      entidade, idEntidade,
+      nomeArquivo: `${entidade}_${rotulo}_${Date.now()}_${i + 1}.jpg`
+    });
+  }
+}
+
+/* ── GPS ── */
+let gpsAtual = null;
+function capturarGPS(pfx) {
+  const sId = pfx === 'es' ? 'es-gps-status' : 'gps-status';
+  const cId = pfx === 'es' ? 'es-gps-coord' : 'gps-coord';
+  const st = document.getElementById(sId), co = document.getElementById(cId);
+  if (!navigator.geolocation) { st.textContent = 'GPS indisponível neste aparelho'; return; }
+  st.textContent = 'Capturando GPS…'; co.textContent = '';
+  navigator.geolocation.getCurrentPosition(pos => {
+    gpsAtual = { lat: pos.coords.latitude, lng: pos.coords.longitude, prec: pos.coords.accuracy };
+    st.textContent = `GPS ok (±${Math.round(gpsAtual.prec)} m)`;
+    co.textContent = gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6);
+  }, err => {
+    gpsAtual = null;
+    st.textContent = 'GPS falhou: ' + (err.message || 'sem sinal');
+  }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 });
+}
+
+/* ================================================================
+   UI: navegação, catálogo e módulos
+   ================================================================ */
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(s => s.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    const alvo = { home:'home', arbo:'arbo', ponto:'arbo', jard:'jard', espaco:'jard', fila:'fila' }[p];
+    b.classList.toggle('active', b.dataset.p === alvo);
+  });
+  window.scrollTo(0, 0);
+}
+function navTo(p) {
+  if (p === 'arbo') return abrirArbo();
+  if (p === 'jard') return abrirJard();
+  if (p === 'fila') { showPage('fila'); return renderFila(); }
+  showPage(p);
+}
+
+/* ── CATÁLOGO DE ESPÉCIES (cache local p/ offline) ── */
+function catalogo() {
+  try { return JSON.parse(localStorage.getItem('catalogo') || '[]'); } catch(e) { return []; }
+}
+async function carregarCatalogo() {
+  try {
+    const rows = await sbSelect('especies_catalogo',
+      'select=id_especie,nome_popular,categoria,uso&ativo=eq.true&order=nome_popular.asc');
+    const norm = (rows || []).map(c => ({ ...c, uso: Array.isArray(c.uso) ? c.uso.join(',') : (c.uso || '') }));
+    localStorage.setItem('catalogo', JSON.stringify(norm));
+    montarSelectsEspecies();
+  } catch(e) { console.warn('catalogo:', e.message); }
+}
+function optionsEspecies(uso, incluirVazio) {
+  const cat = catalogo().filter(c => !uso || (c.uso || '').includes(uso));
+  let h = incluirVazio ? '<option value="">— selecione —</option>' : '';
+  h += cat.map(c => `<option value="${c.nome_popular}">${c.nome_popular}</option>`).join('');
+  h += '<option value="__livre__">Outra (digitar)…</option>';
+  return h;
+}
+function montarSelectsEspecies() {
+  document.getElementById('pt-esp-plano').innerHTML = optionsEspecies('arborizacao', true);
+  document.getElementById('pt-esp-sug').innerHTML = optionsEspecies('arborizacao', true);
+}
+
+/* ── IMPEDIMENTOS / ITENS (chips) ── */
+const IMPEDIMENTOS = [
+  ['poste','Poste'], ['garagem','Garagem'], ['comercio','Comércio'], ['guia_rebaixada','Guia rebaixada'],
+  ['placa','Placa'], ['esgoto','Esgoto'], ['hidrante','Hidrante'], ['outro','Outro']
+];
+const ITENS_CANTEIRO = [
+  ['poste','Poste'], ['placa','Placa'], ['banco','Banco'], ['lixeira','Lixeira'],
+  ['monumento','Monumento'], ['hidrante','Hidrante'], ['floreira','Floreira'], ['outro','Outro']
+];
+function montarChips(elId, lista, classeOn) {
+  const el = document.getElementById(elId);
+  el.innerHTML = lista.map(([v, l]) => `<span class="chip" data-v="${v}">${l}</span>`).join('');
+  el.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+    c.classList.toggle(classeOn);
+    if (elId === 'pt-imped' && c.dataset.v === 'outro')
+      document.getElementById('pt-imped-outro').style.display = c.classList.contains(classeOn) ? 'block' : 'none';
+  });
+}
+function chipsMarcados(elId, classeOn) {
+  return [...document.querySelectorAll('#' + elId + ' .chip.' + classeOn)].map(c => c.dataset.v);
+}
+function limparChips(elId, classeOn) {
+  document.querySelectorAll('#' + elId + ' .chip').forEach(c => c.classList.remove(classeOn));
+}
+function pickOne(el) {
+  el.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('on-green'));
+  el.classList.add('on-green');
+}
+
+/* ================================================================
+   MÓDULO ARBORIZAÇÃO
+   ================================================================ */
+function levAtual() { try { return JSON.parse(localStorage.getItem('lev_atual') || 'null'); } catch(e){ return null; } }
+function setLevAtual(l) { l ? localStorage.setItem('lev_atual', JSON.stringify(l)) : localStorage.removeItem('lev_atual'); }
+function cacheLevs() { try { return JSON.parse(localStorage.getItem('cache_levs') || '[]'); } catch(e){ return []; } }
+
+function abrirArbo() { showPage('arbo'); renderArboLista(); atualizarArboOnline(); }
+
+function novoLevantamento() {
+  document.getElementById('arbo-form').style.display = 'block';
+  document.getElementById('lv-rua').focus();
+}
+
+async function salvarLevantamento() {
+  const rua = document.getElementById('lv-rua').value.trim();
+  if (!rua) return showToast('Informe o nome da rua.', 'error');
+  const lev = {
+    id_levantamento: uuid(),
+    nome_rua: rua,
+    quadra: document.getElementById('lv-quadra').value.trim(),
+    numeracao: document.getElementById('lv-num').value.trim(),
+    bairro: document.getElementById('lv-bairro').value.trim(),
+    status: 'em_andamento',
+    criado_em: agora(),
+    criado_por: userEmail
+  };
+  await enqueue({ tipo: 'insert', tabela: 'arbo_levantamentos', dados: lev });
+  const cache = cacheLevs();
+  cache.unshift({ ...lev, pontos: 0 });
+  localStorage.setItem('cache_levs', JSON.stringify(cache.slice(0, 60)));
+  ['lv-rua','lv-quadra','lv-num','lv-bairro'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('arbo-form').style.display = 'none';
+  abrirLevantamento(lev.id_levantamento);
+}
+
+function renderArboLista() {
+  const el = document.getElementById('arbo-lista');
+  const levs = cacheLevs();
+  if (!levs.length) { el.innerHTML = '<div class="empty">Nenhuma rua ainda. Toque em "+ Nova rua" para começar o levantamento.</div>'; return; }
+  el.innerHTML = levs.map(l => `
+    <div class="list-item" onclick="abrirLevantamento('${l.id_levantamento}')">
+      <div>
+        <div class="li-title">${escapeHtml(l.nome_rua)}</div>
+        <div class="li-sub">${[l.quadra && 'Quadra ' + escapeHtml(l.quadra), escapeHtml(l.numeracao || ''), escapeHtml(l.bairro || '')].filter(Boolean).join(' · ') || '—'}</div>
+      </div>
+      <span class="badge ${l.status === 'encerrado' ? '' : 'warn'}">${l.status === 'encerrado' ? 'Encerrada' : (l.pontos || 0) + ' pts'}</span>
+    </div>`).join('');
+}
+
+async function atualizarArboOnline() {
+  if (!sessionValida() || !navigator.onLine) return;
+  try {
+    const rows = await sbSelect('arbo_levantamentos',
+      'select=id_levantamento,nome_rua,quadra,numeracao,bairro,status,criado_em,arbo_pontos(count)&order=criado_em.desc&limit=60');
+    const online = (rows || []).map(o => ({
+      ...o,
+      pontos: (o.arbo_pontos && o.arbo_pontos[0] && o.arbo_pontos[0].count) || 0
+    }));
+    const pendentes = cacheLevs().filter(c => !online.some(o => o.id_levantamento === c.id_levantamento));
+    localStorage.setItem('cache_levs', JSON.stringify([...pendentes, ...online]));
+    renderArboLista();
+  } catch(e) { console.warn('arbo online:', e.message); }
+}
+
+function abrirLevantamento(id) {
+  const l = cacheLevs().find(x => x.id_levantamento === id);
+  if (!l) return;
+  setLevAtual({ ...l, seq: l.pontos || 0 });
+  montarSelectsEspecies();
+  montarChips('pt-imped', IMPEDIMENTOS, 'on');
+  pintarPonto();
+  showPage('ponto');
+  capturarGPS();
+}
+
+function pintarPonto() {
+  const l = levAtual();
+  document.getElementById('pt-rua').textContent = l.nome_rua;
+  document.getElementById('pt-rua-sub').textContent =
+    [l.quadra && 'Quadra ' + l.quadra, l.numeracao, l.bairro].filter(Boolean).join(' · ') || 'Rua fixada';
+  document.getElementById('pt-seq').textContent = 'Ponto ' + (l.seq + 1);
+}
+
+function valorEspecie(selId) {
+  const v = document.getElementById(selId).value;
+  if (v === '__livre__') return document.getElementById('pt-esp-livre').value.trim();
+  return v;
+}
+document.addEventListener('change', e => {
+  if (e.target.id === 'pt-esp-plano' || e.target.id === 'pt-esp-sug') {
+    const livre = document.getElementById('pt-esp-plano').value === '__livre__' ||
+                  document.getElementById('pt-esp-sug').value === '__livre__';
+    document.getElementById('pt-esp-livre').style.display = livre ? 'block' : 'none';
+  }
+});
+
+async function salvarPonto() {
+  const l = levAtual();
+  if (!l) return showPage('arbo');
+  const idPonto = uuid();
+  const imped = chipsMarcados('pt-imped', 'on');
+  const dados = {
+    id_ponto: idPonto,
+    id_levantamento: l.id_levantamento,
+    seq: l.seq + 1,
+    lat: gpsAtual ? gpsAtual.lat : null,
+    lng: gpsAtual ? gpsAtual.lng : null,
+    precisao_m: gpsAtual ? Math.round(gpsAtual.prec * 10) / 10 : null,
+    impedimentos: imped,
+    impedimento_outro: imped.includes('outro') ? document.getElementById('pt-imped-outro').value.trim() : null,
+    especie_plano: valorEspecie('pt-esp-plano') || null,
+    especie_sugerida: valorEspecie('pt-esp-sug') || null,
+    distancia_anterior_m: parseFloat(document.getElementById('pt-dist').value) || null,
+    obs: document.getElementById('pt-obs').value.trim() || null,
+    criado_em: agora(),
+    criado_por: userEmail
+  };
+  await enqueue({ tipo: 'insert', tabela: 'arbo_pontos', dados });
+  await enfileirarFotos('pt', 'arbo_ponto', idPonto, 'p' + dados.seq);
+
+  l.seq++; l.pontos = l.seq;
+  setLevAtual(l);
+  const cache = cacheLevs().map(c => c.id_levantamento === l.id_levantamento ? { ...c, pontos: l.seq } : c);
+  localStorage.setItem('cache_levs', JSON.stringify(cache));
+
+  // limpa só o que muda de ponto pra ponto — rua continua fixada
+  limparChips('pt-imped', 'on');
+  document.getElementById('pt-imped-outro').style.display = 'none';
+  document.getElementById('pt-imped-outro').value = '';
+  document.getElementById('pt-obs').value = '';
+  pintarPonto();
+  capturarGPS();
+  showToast('Ponto ' + l.seq + ' salvo. Próximo!', 'success');
+  window.scrollTo(0, 0);
+}
+
+async function encerrarRua() {
+  const l = levAtual();
+  if (!l) return;
+  await enqueue({
+    tipo: 'update', tabela: 'arbo_levantamentos',
+    filter: { id_levantamento: 'eq.' + l.id_levantamento },
+    patch: { status: 'encerrado', encerrado_em: agora() }
+  });
+  const cache = cacheLevs().map(c => c.id_levantamento === l.id_levantamento ? { ...c, status: 'encerrado' } : c);
+  localStorage.setItem('cache_levs', JSON.stringify(cache));
+  setLevAtual(null);
+  showToast('Rua encerrada: ' + l.seq + ' ponto(s).', 'success');
+  showPage('arbo'); renderArboLista();
+}
+
+/* ================================================================
+   MÓDULO JARDINAGEM
+   ================================================================ */
+function cacheEspacos() { try { return JSON.parse(localStorage.getItem('cache_espacos') || '[]'); } catch(e){ return []; } }
+function espAtual() { try { return JSON.parse(localStorage.getItem('esp_atual') || 'null'); } catch(e){ return null; } }
+
+function abrirJard() { showPage('jard'); renderJardLista(); atualizarJardOnline(); }
+
+function novoEspaco() {
+  document.getElementById('jard-form').style.display = 'block';
+  gpsAtual = null;
+  document.getElementById('es-gps-status').textContent = 'GPS não capturado';
+  document.getElementById('es-gps-coord').textContent = '';
+  document.getElementById('es-nome').focus();
+}
+
+function proximoCodigoJD() {
+  let n = parseInt(localStorage.getItem('jd_counter') || '0', 10) + 1;
+  localStorage.setItem('jd_counter', String(n));
+  return 'JD-' + String(n).padStart(4, '0');
+}
+async function sincronizarContadorJD() {
+  try {
+    const rows = await sbSelect('jard_espacos',
+      'select=codigo&codigo=like.JD-*&order=codigo.desc&limit=1');
+    let m = 0;
+    if (rows && rows[0] && rows[0].codigo) {
+      const match = rows[0].codigo.match(/JD-(\d+)/);
+      if (match) m = parseInt(match[1], 10);
+    }
+    const local = parseInt(localStorage.getItem('jd_counter') || '0', 10);
+    if (m > local) localStorage.setItem('jd_counter', String(m));
+  } catch(e) { console.warn('contador JD:', e.message); }
+}
+
+async function salvarEspaco() {
+  const nome = document.getElementById('es-nome').value.trim();
+  if (!nome) return showToast('Informe o nome do espaço.', 'error');
+  const esp = {
+    id_espaco: uuid(),
+    codigo: proximoCodigoJD(),
+    nome,
+    tipo: document.getElementById('es-tipo').value,
+    endereco: document.getElementById('es-end').value.trim() || null,
+    bairro: document.getElementById('es-bairro').value.trim() || null,
+    lat: gpsAtual ? gpsAtual.lat : null,
+    lng: gpsAtual ? gpsAtual.lng : null,
+    status: 'ativo',
+    obs: document.getElementById('es-obs').value.trim() || null,
+    criado_em: agora(),
+    criado_por: userEmail
+  };
+  await enqueue({ tipo: 'insert', tabela: 'jard_espacos', dados: esp });
+  await enfileirarFotos('es', 'jard_espaco', esp.id_espaco, esp.codigo);
+  const cache = cacheEspacos();
+  cache.unshift({ ...esp, canteiros: 0 });
+  localStorage.setItem('cache_espacos', JSON.stringify(cache.slice(0, 80)));
+  ['es-nome','es-end','es-bairro','es-obs'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('jard-form').style.display = 'none';
+  abrirEspaco(esp.id_espaco);
+}
+
+function renderJardLista() {
+  const el = document.getElementById('jard-lista');
+  const esps = cacheEspacos();
+  if (!esps.length) { el.innerHTML = '<div class="empty">Nenhum espaço ainda. Toque em "+ Novo espaço" para cadastrar o primeiro.</div>'; return; }
+  const TIPO_L = { praca:'Praça', rotatoria:'Rotatória', canteiro_rua:'Canteiro de rua', floreira:'Floreira', jardim:'Jardim', outro:'Outro' };
+  el.innerHTML = esps.map(e => `
+    <div class="list-item" onclick="abrirEspaco('${e.id_espaco}')">
+      <div>
+        <div class="li-title">${escapeHtml(e.nome)}</div>
+        <div class="li-sub">${[e.codigo, TIPO_L[e.tipo] || e.tipo, escapeHtml(e.bairro || '')].filter(Boolean).join(' · ')}</div>
+      </div>
+      <span class="badge">${e.canteiros || 0} cant.</span>
+    </div>`).join('');
+}
+
+async function atualizarJardOnline() {
+  if (!sessionValida() || !navigator.onLine) return;
+  try {
+    const rows = await sbSelect('jard_espacos',
+      'select=id_espaco,codigo,nome,tipo,endereco,bairro,criado_em,jard_canteiros(count)&order=criado_em.desc&limit=80');
+    const online = (rows || []).map(o => ({
+      ...o,
+      canteiros: (o.jard_canteiros && o.jard_canteiros[0] && o.jard_canteiros[0].count) || 0
+    }));
+    const pendentes = cacheEspacos().filter(c => !online.some(o => o.id_espaco === c.id_espaco));
+    localStorage.setItem('cache_espacos', JSON.stringify([...pendentes, ...online]));
+    renderJardLista();
+  } catch(e) { console.warn('jard online:', e.message); }
+}
+
+function abrirEspaco(id) {
+  const e = cacheEspacos().find(x => x.id_espaco === id);
+  if (!e) return;
+  localStorage.setItem('esp_atual', JSON.stringify(e));
+  document.getElementById('ep-nome').textContent = e.nome;
+  document.getElementById('ep-sub').textContent = [e.endereco, e.bairro].filter(Boolean).join(' · ') || 'Espaço de jardinagem';
+  document.getElementById('ep-cod').textContent = e.codigo || 'JD';
+  montarChips('ct-itens', ITENS_CANTEIRO, 'on-green');
+  resetCanteiroForm();
+  renderCanteirosSalvos();
+  showPage('espaco');
+}
+
+/* canteiros salvos na sessão (visual) */
+function renderCanteirosSalvos() {
+  const e = espAtual();
+  const salvos = JSON.parse(sessionStorage.getItem('cts_' + e.id_espaco) || '[]');
+  const el = document.getElementById('ep-canteiros');
+  el.innerHTML = salvos.map(c => `
+    <div class="list-item" style="cursor:default">
+      <div>
+        <div class="li-title">Canteiro ${c.seq} — ${c.formato}</div>
+        <div class="li-sub">${c.area_m2 ? c.area_m2.toFixed(1) + ' m²' : 'área n/d'} · ${c.especies} espécie(s)</div>
+      </div>
+      <span class="badge ${c.situacao === 'criar' ? 'warn' : c.situacao === 'reformular' ? 'red' : ''}">${c.situacao || '—'}</span>
+    </div>`).join('');
+}
+
+let formatoAtual = 'retangular';
+function setFormato(el) {
+  pickOne(el);
+  formatoAtual = el.dataset.v;
+  document.getElementById('ct-dims-ret').style.display = formatoAtual === 'retangular' ? 'grid' : 'none';
+  document.getElementById('ct-dims-circ').style.display = formatoAtual === 'circular' ? 'grid' : 'none';
+  document.getElementById('ct-dims-livre').style.display = (formatoAtual === 'coracao' || formatoAtual === 'irregular') ? 'block' : 'none';
+  calcArea();
+}
+
+function areaCanteiro() {
+  const vias = Math.max(1, parseInt(
+    (formatoAtual === 'circular' ? document.getElementById('ct-vias2').value : document.getElementById('ct-vias').value) || '1', 10));
+  let a = 0;
+  if (formatoAtual === 'retangular') {
+    a = (parseFloat(document.getElementById('ct-comp').value) || 0) * (parseFloat(document.getElementById('ct-larg').value) || 0);
+  } else if (formatoAtual === 'circular') {
+    const d = parseFloat(document.getElementById('ct-diam').value) || 0;
+    a = Math.PI * Math.pow(d / 2, 2);
+  } else {
+    a = parseFloat(document.getElementById('ct-area-livre').value) || 0;
+  }
+  return { area: a * vias, vias };
+}
+
+function calcArea() {
+  const { area } = areaCanteiro();
+  const box = document.getElementById('ct-calc');
+  if (!area) { box.style.display = 'none'; return; }
+  const mudas = Math.round(area / ESPACAMENTO_M2);
+  const caixas = Math.ceil(mudas / CX_MUDAS);
+  box.style.display = 'block';
+  box.innerHTML = `Área: <b>${area.toFixed(1).replace('.', ',')} m²</b> — sugestão (15×15 cm): <b>~${mudas.toLocaleString('pt-BR')} mudas</b> = <b>${caixas} cx</b>`;
+  document.querySelectorAll('.esp-row').forEach(r => sugerirQtd(r));
+}
+
+/* linhas de espécie */
+function addEspecieRow() {
+  const div = document.createElement('div');
+  div.className = 'esp-row card';
+  div.style.padding = '12px';
+  div.innerHTML = `
+    <select class="er-sel">${optionsEspecies('jardinagem', true)}</select>
+    <input type="text" class="er-livre" placeholder="Nome da espécie (livre)" style="display:none; margin-top:8px">
+    <div class="row3" style="margin-top:8px">
+      <div><label style="margin-top:0">Mudas</label><input type="number" class="er-mudas" inputmode="numeric"></div>
+      <div><label style="margin-top:0">Caixas</label><input type="number" class="er-cx" inputmode="decimal" step="0.5"></div>
+      <div><label style="margin-top:0">Condição</label>
+        <select class="er-cond"><option value="bom">Bom</option><option value="replantar">Replantar</option><option value="criar">Criar</option></select>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-danger-ghost" style="margin-top:8px" onclick="this.parentElement.remove()">Remover</button>`;
+  document.getElementById('ct-especies').appendChild(div);
+  const sel = div.querySelector('.er-sel');
+  sel.onchange = () => div.querySelector('.er-livre').style.display = sel.value === '__livre__' ? 'block' : 'none';
+  const mu = div.querySelector('.er-mudas'), cx = div.querySelector('.er-cx');
+  mu.dataset.origem = ''; 
+  mu.oninput = () => { cx.value = mu.value ? (Math.round(mu.value / CX_MUDAS * 10) / 10) : ''; mu.dataset.origem = 'manual'; };
+  cx.oninput = () => { mu.value = cx.value ? Math.round(cx.value * CX_MUDAS) : ''; mu.dataset.origem = 'manual'; };
+  sugerirQtd(div);
+}
+function sugerirQtd(row) {
+  const mu = row.querySelector('.er-mudas'), cx = row.querySelector('.er-cx');
+  if (mu.dataset.origem === 'manual' || mu.value) return;
+  const { area } = areaCanteiro();
+  if (!area) return;
+  const mudas = Math.round(area / ESPACAMENTO_M2);
+  mu.value = mudas; cx.value = Math.round(mudas / CX_MUDAS * 10) / 10;
+  mu.dataset.origem = 'calculada';
+}
+
+function resetCanteiroForm() {
+  formatoAtual = 'retangular';
+  document.querySelectorAll('#ct-formato .chip').forEach((c, i) => c.classList.toggle('on-green', i === 0));
+  document.getElementById('ct-dims-ret').style.display = 'grid';
+  document.getElementById('ct-dims-circ').style.display = 'none';
+  document.getElementById('ct-dims-livre').style.display = 'none';
+  ['ct-comp','ct-larg','ct-diam','ct-area-livre','ct-obs'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('ct-vias').value = 1;
+  document.getElementById('ct-vias2').value = 1;
+  document.getElementById('ct-calc').style.display = 'none';
+  limparChips('ct-situacao', 'on-green');
+  limparChips('ct-itens', 'on-green');
+  document.getElementById('ct-especies').innerHTML = '';
+  addEspecieRow();
+}
+
+async function salvarCanteiro() {
+  const e = espAtual();
+  if (!e) return showPage('jard');
+  const { area, vias } = areaCanteiro();
+  const salvos = JSON.parse(sessionStorage.getItem('cts_' + e.id_espaco) || '[]');
+  const seq = (e.canteiros || 0) + salvos.length + 1;
+  const idCanteiro = uuid();
+  const situacao = chipsMarcados('ct-situacao', 'on-green')[0] || null;
+
+  const dados = {
+    id_canteiro: idCanteiro,
+    id_espaco: e.id_espaco,
+    seq,
+    formato: formatoAtual,
+    comp_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-comp').value) || null) : null,
+    larg_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-larg').value) || null) : null,
+    diametro_m: formatoAtual === 'circular' ? (parseFloat(document.getElementById('ct-diam').value) || null) : null,
+    vias,
+    area_m2: area ? Math.round(area * 100) / 100 : null,
+    situacao,
+    itens: chipsMarcados('ct-itens', 'on-green'),
+    obs: document.getElementById('ct-obs').value.trim() || null,
+    criado_em: agora(),
+    criado_por: userEmail
+  };
+  await enqueue({ tipo: 'insert', tabela: 'jard_canteiros', dados });
+
+  let nEsp = 0;
+  for (const row of document.querySelectorAll('.esp-row')) {
+    const sel = row.querySelector('.er-sel').value;
+    const nome = sel === '__livre__' ? row.querySelector('.er-livre').value.trim() : sel;
+    const mudas = parseInt(row.querySelector('.er-mudas').value || '0', 10);
+    if (!nome || !mudas) continue;
+    const cat = catalogo().find(c => c.nome_popular === nome);
+    await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: {
+      id_registro: uuid(), id_canteiro: idCanteiro,
+      id_especie: cat ? cat.id_especie : null,
+      especie_texto: nome,
+      qtd_mudas: mudas,
+      qtd_caixas: Math.round(mudas / CX_MUDAS * 10) / 10,
+      origem_qtd: row.querySelector('.er-mudas').dataset.origem || 'manual',
+      condicao: row.querySelector('.er-cond').value,
+      criado_em: agora(), criado_por: userEmail
+    }});
+    nEsp++;
+  }
+  await enfileirarFotos('ct', 'jard_canteiro', idCanteiro, (e.codigo || 'JD') + '_c' + seq);
+
+  salvos.push({ seq, formato: formatoAtual, area_m2: dados.area_m2, situacao, especies: nEsp });
+  sessionStorage.setItem('cts_' + e.id_espaco, JSON.stringify(salvos));
+  const cache = cacheEspacos().map(c => c.id_espaco === e.id_espaco ? { ...c, canteiros: (e.canteiros || 0) + salvos.length } : c);
+  localStorage.setItem('cache_espacos', JSON.stringify(cache));
+
+  renderCanteirosSalvos();
+  resetCanteiroForm();
+  showToast('Canteiro ' + seq + ' salvo.', 'success');
+  window.scrollTo(0, 0);
+}
+
+/* ================================================================
+   FILA (tela)
+   ================================================================ */
+const ROTULO_TIPO = { insert: 'Registro', update: 'Atualização', foto: 'Foto' };
+async function renderFila() {
+  const itens = (await idbAll('fila')).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+  const el = document.getElementById('fila-lista');
+  document.getElementById('fila-sub').textContent = itens.length
+    ? itens.length + ' registro(s) na fila.'
+    : 'Tudo sincronizado.';
+  if (!itens.length) { el.innerHTML = '<div class="empty">Nada pendente. Todos os registros já estão no BigQuery.</div>'; return; }
+  el.innerHTML = itens.map(it => `
+    <div class="list-item" style="cursor:default">
+      <div>
+        <div class="li-title">${ROTULO_TIPO[it.tipo] || it.tipo}${it.tabela ? ' · ' + it.tabela : ''}${it.entidade ? ' · ' + it.entidade : ''}</div>
+        <div class="li-sub">${new Date(it.criado_em).toLocaleString('pt-BR')}${it.erro ? ' — ' + escapeHtml(it.erro) : ''}</div>
+      </div>
+      <span class="badge ${it.status === 'erro' ? 'red' : 'warn'}">${it.status === 'erro' ? 'Erro' : 'Pendente'}</span>
+    </div>`).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ── BOOT ── */
+(async function init() {
+  await abrirDB();
+  atualizarBadgeFila();
+  montarChips('pt-imped', IMPEDIMENTOS, 'on');
+  montarChips('ct-itens', ITENS_CANTEIRO, 'on-green');
+  montarSelectsEspecies();
+  await bootSupabase();
+  updateAuthUI(!!session);
+  if (session) onSessionReady();
+  const lev = levAtual();
+  if (lev && lev.status !== 'encerrado') {
+    montarSelectsEspecies();
+    pintarPonto();
+  }
+})();
+</script>
+</body>
+</html>
