@@ -221,6 +221,91 @@
     font-size: 12.5px; font-weight: 700; text-align: center; padding: 7px;
   }
   body.offline .offline-bar { display: block; }
+
+  /* ===== CONSULTA ===== */
+  .cons-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .cons-tab {
+    flex: 1; padding: 10px; text-align: center; font-size: 14px; font-weight: 700; cursor: pointer;
+    border-radius: var(--radius); border: 1px solid var(--border); background: #fff; color: var(--text-secondary);
+    font-family: inherit;
+  }
+  .cons-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .cons-filtros {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 12px; margin-bottom: 6px;
+  }
+  .cons-filtros label { margin: 0 0 4px; }
+  .cons-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .cons-count { font-size: 13px; color: var(--text-secondary); margin-left: auto; }
+  .cons-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+  .cons-table th { text-align: left; font-size: 12px; font-weight: 700; color: var(--text-secondary); padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .cons-table td { font-size: 13.5px; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .cons-table tr:last-child td { border-bottom: none; }
+  .cons-table tbody tr { cursor: pointer; }
+  .cons-table tbody tr:hover { background: var(--accent-light); }
+  .cons-photo-count { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--accent-dark); font-weight: 700; }
+  .cons-mini { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border); }
+
+  /* painel lateral (desktop) / modal (mobile) */
+  .drawer-backdrop { display: none; position: fixed; inset: 0; background: rgba(20,30,24,0.5); z-index: 200; }
+  .drawer-backdrop.open { display: block; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: min(480px, 100%);
+    background: var(--bg); z-index: 201; overflow-y: auto;
+    transform: translateX(100%); transition: transform .22s ease;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    position: sticky; top: 0; background: var(--accent-dark); color: #fff; z-index: 2;
+    padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .drawer-head .dh-title { font-size: 16px; font-weight: 700; }
+  .drawer-head .dh-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+  .drawer-close { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 34px; height: 34px; border-radius: 8px; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+  .drawer-body { padding: 16px; }
+  .det-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .det-row .dk { color: var(--text-muted); }
+  .det-row .dv { font-weight: 600; text-align: right; }
+  .det-sec-title { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .gal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .gal-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); }
+  .sub-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+  .sub-item .si-t { font-size: 13.5px; font-weight: 700; }
+  .sub-item .si-s { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .sub-item .foto-strip { margin-top: 8px; }
+
+  /* lightbox navegável */
+  .lb { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.94); z-index: 400; flex-direction: column; }
+  .lb.open { display: flex; }
+  .lb-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; color: #fff; }
+  .lb-cap { font-size: 14px; font-weight: 600; }
+  .lb-cap small { display: block; opacity: 0.65; font-weight: 400; font-size: 12px; }
+  .lb-x { background: rgba(255,255,255,0.15); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 22px; cursor: pointer; }
+  .lb-stage { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding: 0 8px; }
+  .lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); border: none; color: #fff; width: 46px; height: 46px; border-radius: 50%; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .lb-nav:disabled { opacity: 0.25; cursor: default; }
+  .lb-prev { left: 12px; } .lb-next { right: 12px; }
+  .lb-film { display: flex; gap: 6px; padding: 10px 16px; overflow-x: auto; background: rgba(0,0,0,0.4); }
+  .lb-film img { height: 54px; width: 54px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: 0.5; border: 2px solid transparent; flex-shrink: 0; }
+  .lb-film img.on { opacity: 1; border-color: #fff; }
+  .lb-jump { display: flex; gap: 8px; padding: 0 16px 12px; }
+  .lb-jump button { flex: 1; background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  .lb-jump button:disabled { opacity: 0.3; cursor: default; }
+
+  @media (max-width: 640px) {
+    .cons-table thead { display: none; }
+    .cons-table, .cons-table tbody, .cons-table tr, .cons-table td { display: block; width: 100%; }
+    .cons-table tr { border-bottom: 8px solid var(--bg); }
+    .cons-table td { border: none; padding: 4px 12px; }
+    .cons-table td:first-child { padding-top: 12px; font-weight: 700; font-size: 15px; }
+    .cons-table td:last-child { padding-bottom: 12px; }
+    .cons-table td::before { content: attr(data-l) ": "; color: var(--text-muted); font-size: 12px; }
+    .cons-table td:first-child::before { content: ""; }
+  }
+
 </style>
 </head>
 <body>
@@ -254,6 +339,11 @@
   <div class="card action-card" onclick="abrirJard()">
     <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-5h6v5"/></svg></div>
     <div><div class="action-title">Espaços de jardinagem</div><div class="action-desc">Praças, canteiros e rotatórias — com espécies e cálculo de mudas</div></div>
+  </div>
+
+  <div class="card action-card" onclick="abrirConsulta()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+    <div><div class="action-title">Consulta</div><div class="action-desc">Ver dados coletados, fotos e exportar planilha</div></div>
   </div>
 
   <div class="card action-card" onclick="showPage('fila'); renderFila()">
@@ -496,12 +586,64 @@
 <!-- ============ FILA ============ -->
 <section class="page" id="page-fila">
   <h2>Fila de sincronização</h2>
-  <div class="page-sub" id="fila-sub">Registros aguardando envio ao BigQuery e ao Drive.</div>
+  <div class="page-sub" id="fila-sub">Registros aguardando envio ao Supabase e ao Drive.</div>
   <button class="btn btn-primary" onclick="drainQueue(true)">Sincronizar agora</button>
   <div id="fila-lista" style="margin-top:14px"></div>
 </section>
 
+<!-- ============ CONSULTA ============ -->
+<section class="page" id="page-consulta">
+  <h2>Consulta</h2>
+  <div class="page-sub">Dados coletados em campo. Toque numa linha para ver detalhes e fotos.</div>
+
+  <div class="cons-tabs">
+    <button class="cons-tab active" data-t="arbo" onclick="consTab('arbo')">Arborização</button>
+    <button class="cons-tab" data-t="jard" onclick="consTab('jard')">Jardinagem</button>
+  </div>
+
+  <div class="cons-filtros" id="cons-filtros"></div>
+  <div class="cons-actions">
+    <button class="btn btn-sm btn-primary" onclick="consBuscar()">Buscar</button>
+    <button class="btn btn-sm" onclick="consLimparFiltros()">Limpar filtros</button>
+    <button class="btn btn-sm" onclick="consExportarCSV()">Exportar CSV</button>
+    <span class="cons-count" id="cons-count"></span>
+  </div>
+
+  <div id="cons-resultado"></div>
+</section>
+
 </main>
+
+<!-- Painel de detalhe -->
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="fecharDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="dh-title" id="drawer-title">—</div>
+      <div class="dh-sub" id="drawer-sub">—</div>
+    </div>
+    <button class="drawer-close" onclick="fecharDrawer()" aria-label="Fechar">×</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<!-- Lightbox navegável -->
+<div class="lb" id="lightbox">
+  <div class="lb-top">
+    <div class="lb-cap" id="lb-cap">—<small id="lb-cap-sub"></small></div>
+    <button class="lb-x" onclick="lbClose()" aria-label="Fechar">×</button>
+  </div>
+  <div class="lb-stage">
+    <button class="lb-nav lb-prev" id="lb-prev" onclick="lbStep(-1)" aria-label="Anterior">‹</button>
+    <img id="lb-img" src="" alt="foto">
+    <button class="lb-nav lb-next" id="lb-next" onclick="lbStep(1)" aria-label="Próxima">›</button>
+  </div>
+  <div class="lb-film" id="lb-film"></div>
+  <div class="lb-jump">
+    <button id="lb-jump-prev" onclick="lbJump(-1)">‹ Ponto anterior</button>
+    <button id="lb-jump-next" onclick="lbJump(1)">Próximo ponto ›</button>
+  </div>
+</div>
 
 <nav>
   <button class="nav-btn active" data-p="home" onclick="navTo('home')">
@@ -516,12 +658,17 @@
     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-5h6v5"/></svg>
     Jardinagem
   </button>
+  <button class="nav-btn" data-p="consulta" onclick="navTo('consulta')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    Consulta
+  </button>
   <button class="nav-btn" data-p="fila" onclick="navTo('fila')">
     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
     Fila
     <span class="nav-dot" id="fila-dot"></span>
   </button>
 </nav>
+
 
 <div id="toast"></div>
 
@@ -937,7 +1084,7 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(s => s.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
-    const alvo = { home:'home', arbo:'arbo', rua:'arbo', ponto:'arbo', jard:'jard', espaco:'jard', fila:'fila' }[p];
+    const alvo = { home:'home', arbo:'arbo', rua:'arbo', ponto:'arbo', jard:'jard', espaco:'jard', consulta:'consulta', fila:'fila' }[p];
     b.classList.toggle('active', b.dataset.p === alvo);
   });
   window.scrollTo(0, 0);
@@ -945,6 +1092,7 @@ function showPage(p) {
 function navTo(p) {
   if (p === 'arbo') return abrirArbo();
   if (p === 'jard') return abrirJard();
+  if (p === 'consulta') return abrirConsulta();
   if (p === 'fila') { showPage('fila'); return renderFila(); }
   showPage(p);
 }
@@ -1982,81 +2130,4 @@ async function salvarCanteiro() {
   for (const s of especies) await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: s });
   await enfileirarFotos('ct', 'jard_canteiro', idCanteiro, (e.codigo || 'JD') + '_c' + dados.seq);
 
-  canteirosDoEspaco.push({ ...dados, especies, fotos: [], _pendente: true });
-  const cache = cacheEspacos().map(c => c.id_espaco === e.id_espaco ? { ...c, canteiros: canteirosDoEspaco.length } : c);
-  localStorage.setItem('cache_espacos', JSON.stringify(cache));
-
-  resetCanteiroForm();
-  renderCanteiros();
-  showToast('Canteiro ' + dados.seq + ' salvo.', 'success');
-  window.scrollTo(0, 0);
-}
-
-async function excluirCanteiro(id) {
-  const c = canteirosDoEspaco.find(x => x.id_canteiro === id);
-  if (!c) return;
-  if (!confirm(`Excluir canteiro ${c.seq}${c.formato ? ' (' + (FORMATO_L[c.formato] || c.formato) + ')' : ''} e suas espécies?\n\nEssa ação não pode ser desfeita.`)) return;
-  await cancelarPendentes(it =>
-    (it.tipo === 'insert' && it.tabela === 'jard_canteiros' && it.dados?.id_canteiro === id) ||
-    (it.tipo === 'insert' && it.tabela === 'jard_especies'  && it.dados?.id_canteiro === id) ||
-    (it.tipo === 'update' && it.tabela === 'jard_canteiros' && it.filter?.id_canteiro === 'eq.' + id) ||
-    (it.tipo === 'foto'   && it.entidade === 'jard_canteiro' && it.idEntidade === id)
-  );
-  if (!c._pendente) {
-    await enqueue({ tipo: 'delete', tabela: 'jard_canteiros', filter: { id_canteiro: 'eq.' + id } });
-  }
-  canteirosDoEspaco = canteirosDoEspaco.filter(x => x.id_canteiro !== id);
-  const e = espAtual();
-  if (e) {
-    const cache = cacheEspacos().map(x => x.id_espaco === e.id_espaco ? { ...x, canteiros: canteirosDoEspaco.length } : x);
-    localStorage.setItem('cache_espacos', JSON.stringify(cache));
-  }
-  if (canteiroEditando === id) sairEdicaoCanteiro();
-  else renderCanteiros();
-  showToast('Canteiro excluído.', 'success');
-}
-
-/* ================================================================
-   FILA (tela)
-   ================================================================ */
-const ROTULO_TIPO = { insert: 'Registro', update: 'Atualização', delete: 'Exclusão', foto: 'Foto' };
-async function renderFila() {
-  const itens = (await idbAll('fila')).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
-  const el = document.getElementById('fila-lista');
-  document.getElementById('fila-sub').textContent = itens.length
-    ? itens.length + ' registro(s) na fila.'
-    : 'Tudo sincronizado.';
-  if (!itens.length) { el.innerHTML = '<div class="empty">Nada pendente. Todos os registros já estão no BigQuery.</div>'; return; }
-  el.innerHTML = itens.map(it => `
-    <div class="list-item" style="cursor:default">
-      <div>
-        <div class="li-title">${ROTULO_TIPO[it.tipo] || it.tipo}${it.tabela ? ' · ' + it.tabela : ''}${it.entidade ? ' · ' + it.entidade : ''}</div>
-        <div class="li-sub">${new Date(it.criado_em).toLocaleString('pt-BR')}${it.erro ? ' — ' + escapeHtml(it.erro) : ''}</div>
-      </div>
-      <span class="badge ${it.status === 'erro' ? 'red' : 'warn'}">${it.status === 'erro' ? 'Erro' : 'Pendente'}</span>
-    </div>`).join('');
-}
-
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-/* ── BOOT ── */
-(async function init() {
-  await abrirDB();
-  atualizarBadgeFila();
-  montarChips('pt-imped', IMPEDIMENTOS, 'on');
-  montarChips('ct-itens', ITENS_CANTEIRO, 'on-green');
-  montarSelectsEspecies();
-  await bootSupabase();
-  updateAuthUI(!!session);
-  if (session) onSessionReady();
-  const t = trechoAtual();
-  if (t && t.status !== 'encerrado') {
-    // Estado salvo — próxima abertura de Arborização já vai posicionar via abrirTrecho.
-    // Não pinta a tela aqui pra não confundir se o usuário estiver noutro módulo.
-  }
-})();
-</script>
-</body>
-</html>
+  canteirosDoEspaco.push({ ...dados, 
