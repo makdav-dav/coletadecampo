@@ -675,6 +675,57 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
 <script>
 /* ================================================================
+   BLINDAGEM — roda antes de tudo. Nenhuma linha daqui pode lançar.
+   ================================================================ */
+
+/* Storage seguro: alguns contextos do Android (file://, content://,
+   visualizadores de arquivo) LANÇAM ao tocar em localStorage. Fallback em memória. */
+const __mem = {};
+function __mkStore(nome) {
+  let nativo = null;
+  try { nativo = window[nome]; nativo.setItem('__t', '1'); nativo.removeItem('__t'); }
+  catch (e) { nativo = null; }
+  return {
+    get(k) { try { return nativo ? nativo.getItem(k) : (__mem[nome + ':' + k] ?? null); } catch (e) { return __mem[nome + ':' + k] ?? null; } },
+    set(k, v) { try { if (nativo) { nativo.setItem(k, v); return; } } catch (e) {} __mem[nome + ':' + k] = String(v); },
+    del(k) { try { if (nativo) { nativo.removeItem(k); return; } } catch (e) {} delete __mem[nome + ':' + k]; },
+    ok: !!nativo
+  };
+}
+const LS = __mkStore('localStorage');
+const SS = __mkStore('sessionStorage');
+
+/* Toast definido cedo, sem dependências de estado */
+function showToast(msg, type) {
+  try {
+    const t = document.getElementById('toast');
+    if (!t) { alert(msg); return; }
+    t.textContent = msg;
+    t.className = type || 'info';
+    t.style.display = 'block';
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => { t.style.display = 'none'; }, 4000);
+  } catch (e) {}
+}
+
+/* Erros globais visíveis desde o primeiro instante */
+window.addEventListener('error', e => showToast('Erro: ' + (e.message || 'desconhecido'), 'error'));
+window.addEventListener('unhandledrejection', e => showToast('Erro: ' + (e.reason && e.reason.message ? e.reason.message : e.reason || 'desconhecido'), 'error'));
+
+/* Diagnóstico de contexto: coisas que matam recursos no celular */
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const avisos = [];
+    if (location.protocol === 'file:' || location.protocol === 'content:')
+      avisos.push('Arquivo aberto direto (sem servidor) — login e GPS não funcionam assim. Hospede o app ou use http://localhost.');
+    else if (!window.isSecureContext)
+      avisos.push('Contexto inseguro (http em rede) — Chrome bloqueia GPS e câmera. Use hospedagem https.');
+    if (!LS.ok) avisos.push('Armazenamento local bloqueado neste modo — sessão não persiste.');
+    if (avisos.length) showToast(avisos[0], 'error');
+  } catch (e) {}
+});
+
+/* ================================================================
    SMMACL Campo — núcleo: Supabase auth + REST, Drive p/ fotos
    ================================================================ */
 const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
@@ -686,19 +737,8 @@ let sb = null;
 let session = null;
 let providerToken = null;       // token do Google (só p/ Drive)
 let providerTokenExp = 0;
-let userEmail = localStorage.getItem('user_email') || null;
-let toastTimer = null;
+let userEmail = LS.get('user_email') || null;
 let syncing = false;
-
-/* ── TOAST ── */
-function showToast(msg, type='info') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = type;
-  t.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3200);
-}
 
 /* ── AUTH via Supabase (Google OAuth c/ escopo do Drive) ── */
 function handleAuth() {
@@ -706,7 +746,7 @@ function handleAuth() {
   if (session) {
     sb.auth.signOut().then(() => {
       session = null; providerToken = null; providerTokenExp = 0;
-      sessionStorage.removeItem('drive_token');
+      SS.del('drive_token');
       updateAuthUI(false);
       showToast('Desconectado.', 'info');
     });
@@ -742,14 +782,6 @@ async function onSessionReady() {
   drainQueue();
 }
 
-/* Erros globais viram toast visível — nada de falha silenciosa */
-window.addEventListener('error', e => {
-  try { showToast('Erro: ' + (e.message || 'desconhecido'), 'error'); } catch(_) {}
-});
-window.addEventListener('unhandledrejection', e => {
-  try { showToast('Erro: ' + (e.reason?.message || e.reason || 'desconhecido'), 'error'); } catch(_) {}
-});
-
 async function aguardarSupabaseLib(ms) {
   const fim = Date.now() + ms;
   while (Date.now() < fim) {
@@ -772,14 +804,14 @@ async function bootSupabase() {
   if (s) {
     session = s;
     userEmail = s.user?.email || userEmail;
-    if (userEmail) localStorage.setItem('user_email', userEmail);
+    if (userEmail) LS.set('user_email', userEmail);
     if (s.provider_token) {
       providerToken = s.provider_token;
       providerTokenExp = Date.now() + 3300 * 1000; // 55 min de margem
-      sessionStorage.setItem('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
+      SS.set('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
     } else {
       try {
-        const c = JSON.parse(sessionStorage.getItem('drive_token') || 'null');
+        const c = JSON.parse(SS.get('drive_token') || 'null');
         if (c && Date.now() < c.e) { providerToken = c.t; providerTokenExp = c.e; }
       } catch(e) {}
     }
@@ -788,11 +820,11 @@ async function bootSupabase() {
     if (event === 'SIGNED_IN' && s) {
       session = s;
       userEmail = s.user?.email || userEmail;
-      if (userEmail) localStorage.setItem('user_email', userEmail);
+      if (userEmail) LS.set('user_email', userEmail);
       if (s.provider_token) {
         providerToken = s.provider_token;
         providerTokenExp = Date.now() + 3300 * 1000;
-        sessionStorage.setItem('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
+        SS.set('drive_token', JSON.stringify({ t: providerToken, e: providerTokenExp }));
       }
       onSessionReady();
     } else if (event === 'SIGNED_OUT') {
@@ -923,7 +955,7 @@ async function cancelarPendentes(matcher) {
 
 /* ── DRIVE: upload multipart; pasta criada pelo app (escopo drive.file) ── */
 async function pastaDrive() {
-  const salva = localStorage.getItem('drive_folder_ok');
+  const salva = LS.get('drive_folder_ok');
   if (salva) return salva;
   if (!driveTokenValido()) throw new Error('SEM_TOKEN_DRIVE');
   const meta = { name: 'SMMACL — Fotos de Campo', mimeType: 'application/vnd.google-apps.folder' };
@@ -937,7 +969,7 @@ async function pastaDrive() {
     throw new Error('Drive (criar pasta): ' + (t || r.status));
   }
   const j = await r.json();
-  localStorage.setItem('drive_folder_ok', j.id);
+  LS.set('drive_folder_ok', j.id);
   return j.id;
 }
 
@@ -1192,14 +1224,14 @@ function navTo(p) {
 
 /* ── CATÁLOGO DE ESPÉCIES (cache local p/ offline) ── */
 function catalogo() {
-  try { return JSON.parse(localStorage.getItem('catalogo') || '[]'); } catch(e) { return []; }
+  try { return JSON.parse(LS.get('catalogo') || '[]'); } catch(e) { return []; }
 }
 async function carregarCatalogo() {
   try {
     const rows = await sbSelect('especies_catalogo',
       'select=id_especie,nome_popular,categoria,uso&ativo=eq.true&order=nome_popular.asc');
     const norm = (rows || []).map(c => ({ ...c, uso: Array.isArray(c.uso) ? c.uso.join(',') : (c.uso || '') }));
-    localStorage.setItem('catalogo', JSON.stringify(norm));
+    LS.set('catalogo', JSON.stringify(norm));
     montarSelectsEspecies();
   } catch(e) { console.warn('catalogo:', e.message); }
 }
@@ -1249,14 +1281,14 @@ function pickOne(el) {
    ================================================================ */
 
 /* ── State helpers ───────────────────────────────────────── */
-function ruaAtual()   { try { return JSON.parse(localStorage.getItem('rua_atual') || 'null'); } catch(e){ return null; } }
-function setRuaAtual(r){ r ? localStorage.setItem('rua_atual', JSON.stringify(r)) : localStorage.removeItem('rua_atual'); }
-function cacheRuas()  { try { return JSON.parse(localStorage.getItem('cache_ruas') || '[]'); } catch(e){ return []; } }
+function ruaAtual()   { try { return JSON.parse(LS.get('rua_atual') || 'null'); } catch(e){ return null; } }
+function setRuaAtual(r){ r ? LS.set('rua_atual', JSON.stringify(r)) : LS.del('rua_atual'); }
+function cacheRuas()  { try { return JSON.parse(LS.get('cache_ruas') || '[]'); } catch(e){ return []; } }
 
-function trechoAtual(){ try { return JSON.parse(localStorage.getItem('trecho_atual') || 'null'); } catch(e){ return null; } }
-function setTrechoAtual(t){ t ? localStorage.setItem('trecho_atual', JSON.stringify(t)) : localStorage.removeItem('trecho_atual'); }
-function cacheTrechos(idRua){ try { return JSON.parse(localStorage.getItem('cache_trechos_' + idRua) || '[]'); } catch(e){ return []; } }
-function setCacheTrechos(idRua, arr){ localStorage.setItem('cache_trechos_' + idRua, JSON.stringify(arr)); }
+function trechoAtual(){ try { return JSON.parse(LS.get('trecho_atual') || 'null'); } catch(e){ return null; } }
+function setTrechoAtual(t){ t ? LS.set('trecho_atual', JSON.stringify(t)) : LS.del('trecho_atual'); }
+function cacheTrechos(idRua){ try { return JSON.parse(LS.get('cache_trechos_' + idRua) || '[]'); } catch(e){ return []; } }
+function setCacheTrechos(idRua, arr){ LS.set('cache_trechos_' + idRua, JSON.stringify(arr)); }
 
 let pontosDoTrecho = [];   // pontos carregados + pendentes na fila (com fotos anexadas)
 let pontoEditando  = null; // id_ponto em edição; null = novo ponto
@@ -1283,7 +1315,7 @@ async function salvarRua() {
   await enqueue({ tipo: 'insert', tabela: 'arbo_ruas', dados: rua });
   const cache = cacheRuas();
   cache.unshift({ ...rua, trechos: 0 });
-  localStorage.setItem('cache_ruas', JSON.stringify(cache.slice(0, 80)));
+  LS.set('cache_ruas', JSON.stringify(cache.slice(0, 80)));
   ['ru-nome','ru-bairro','ru-obs'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('rua-form').style.display = 'none';
   abrirRua(rua.id_rua);
@@ -1318,7 +1350,7 @@ async function atualizarArboOnline() {
       trechos: (o.arbo_trechos && o.arbo_trechos[0] && o.arbo_trechos[0].count) || 0
     }));
     const pendentes = cacheRuas().filter(c => !online.some(o => o.id_rua === c.id_rua));
-    localStorage.setItem('cache_ruas', JSON.stringify([...pendentes, ...online]));
+    LS.set('cache_ruas', JSON.stringify([...pendentes, ...online]));
     renderArboLista();
   } catch(e) { console.warn('arbo online:', e.message); }
 }
@@ -1332,8 +1364,8 @@ async function excluirRua(id) {
     (it.tipo === 'insert' && it.tabela === 'arbo_trechos' && it.dados?.id_rua === id)
   );
   await enqueue({ tipo: 'delete', tabela: 'arbo_ruas', filter: { id_rua: 'eq.' + id } });
-  localStorage.setItem('cache_ruas', JSON.stringify(cacheRuas().filter(x => x.id_rua !== id)));
-  localStorage.removeItem('cache_trechos_' + id);
+  LS.set('cache_ruas', JSON.stringify(cacheRuas().filter(x => x.id_rua !== id)));
+  LS.del('cache_trechos_' + id);
   if (ruaAtual()?.id_rua === id) setRuaAtual(null);
   renderArboLista();
   showToast('Rua excluída.', 'success');
@@ -1375,7 +1407,7 @@ async function salvarTrecho() {
   cache.unshift({ ...trecho, pontos: 0 });
   setCacheTrechos(r.id_rua, cache);
   const ruas = cacheRuas().map(x => x.id_rua === r.id_rua ? { ...x, trechos: (x.trechos || 0) + 1 } : x);
-  localStorage.setItem('cache_ruas', JSON.stringify(ruas));
+  LS.set('cache_ruas', JSON.stringify(ruas));
   ['tr-quadra','tr-num-ini','tr-num-fim','tr-obs'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('trecho-form').style.display = 'none';
   renderRuaTrechos();
@@ -1446,7 +1478,7 @@ async function excluirTrecho(id) {
   const novo = cacheTrechos(r.id_rua).filter(x => x.id_trecho !== id);
   setCacheTrechos(r.id_rua, novo);
   const ruas = cacheRuas().map(x => x.id_rua === r.id_rua ? { ...x, trechos: Math.max(0, (x.trechos || 1) - 1) } : x);
-  localStorage.setItem('cache_ruas', JSON.stringify(ruas));
+  LS.set('cache_ruas', JSON.stringify(ruas));
   if (trechoAtual()?.id_trecho === id) setTrechoAtual(null);
   renderRuaTrechos();
   showToast('Trecho excluído.', 'success');
@@ -1772,8 +1804,8 @@ async function encerrarTrecho() {
 /* ================================================================
    MÓDULO JARDINAGEM
    ================================================================ */
-function cacheEspacos() { try { return JSON.parse(localStorage.getItem('cache_espacos') || '[]'); } catch(e){ return []; } }
-function espAtual() { try { return JSON.parse(localStorage.getItem('esp_atual') || 'null'); } catch(e){ return null; } }
+function cacheEspacos() { try { return JSON.parse(LS.get('cache_espacos') || '[]'); } catch(e){ return []; } }
+function espAtual() { try { return JSON.parse(LS.get('esp_atual') || 'null'); } catch(e){ return null; } }
 
 function abrirJard() { showPage('jard'); renderJardLista(); atualizarJardOnline(); }
 
@@ -1786,8 +1818,8 @@ function novoEspaco() {
 }
 
 function proximoCodigoJD() {
-  let n = parseInt(localStorage.getItem('jd_counter') || '0', 10) + 1;
-  localStorage.setItem('jd_counter', String(n));
+  let n = parseInt(LS.get('jd_counter') || '0', 10) + 1;
+  LS.set('jd_counter', String(n));
   return 'JD-' + String(n).padStart(4, '0');
 }
 async function sincronizarContadorJD() {
@@ -1799,8 +1831,8 @@ async function sincronizarContadorJD() {
       const match = rows[0].codigo.match(/JD-(\d+)/);
       if (match) m = parseInt(match[1], 10);
     }
-    const local = parseInt(localStorage.getItem('jd_counter') || '0', 10);
-    if (m > local) localStorage.setItem('jd_counter', String(m));
+    const local = parseInt(LS.get('jd_counter') || '0', 10);
+    if (m > local) LS.set('jd_counter', String(m));
   } catch(e) { console.warn('contador JD:', e.message); }
 }
 
@@ -1825,7 +1857,7 @@ async function salvarEspaco() {
   await enfileirarFotos('es', 'jard_espaco', esp.id_espaco, esp.codigo);
   const cache = cacheEspacos();
   cache.unshift({ ...esp, canteiros: 0 });
-  localStorage.setItem('cache_espacos', JSON.stringify(cache.slice(0, 80)));
+  LS.set('cache_espacos', JSON.stringify(cache.slice(0, 80)));
   ['es-nome','es-end','es-bairro','es-obs'].forEach(i => document.getElementById(i).value = '');
   document.getElementById('jard-form').style.display = 'none';
   abrirEspaco(esp.id_espaco);
@@ -1841,9 +1873,9 @@ async function excluirEspaco(id) {
     (it.tipo === 'foto' && it.entidade === 'jard_espaco' && it.idEntidade === id)
   );
   await enqueue({ tipo: 'delete', tabela: 'jard_espacos', filter: { id_espaco: 'eq.' + id } });
-  localStorage.setItem('cache_espacos', JSON.stringify(cacheEspacos().filter(x => x.id_espaco !== id)));
+  LS.set('cache_espacos', JSON.stringify(cacheEspacos().filter(x => x.id_espaco !== id)));
   const atual = espAtual();
-  if (atual && atual.id_espaco === id) localStorage.removeItem('esp_atual');
+  if (atual && atual.id_espaco === id) LS.del('esp_atual');
   renderJardLista();
   showToast('Espaço excluído.', 'success');
 }
@@ -1878,7 +1910,7 @@ async function atualizarJardOnline() {
       canteiros: (o.jard_canteiros && o.jard_canteiros[0] && o.jard_canteiros[0].count) || 0
     }));
     const pendentes = cacheEspacos().filter(c => !online.some(o => o.id_espaco === c.id_espaco));
-    localStorage.setItem('cache_espacos', JSON.stringify([...pendentes, ...online]));
+    LS.set('cache_espacos', JSON.stringify([...pendentes, ...online]));
     renderJardLista();
   } catch(e) { console.warn('jard online:', e.message); }
 }
@@ -1889,7 +1921,7 @@ let canteiroEditando = null;
 async function abrirEspaco(id) {
   const e = cacheEspacos().find(x => x.id_espaco === id);
   if (!e) return;
-  localStorage.setItem('esp_atual', JSON.stringify(e));
+  LS.set('esp_atual', JSON.stringify(e));
   document.getElementById('ep-nome').textContent = e.nome;
   document.getElementById('ep-sub').textContent = [e.endereco, e.bairro].filter(Boolean).join(' · ') || 'Espaço de jardinagem';
   document.getElementById('ep-cod').textContent = e.codigo || 'JD';
@@ -2115,28 +2147,4 @@ function editarCanteiro(id) {
     const s = document.querySelector('#ct-situacao .chip[data-v="' + c.situacao + '"]');
     if (s) s.classList.add('on-green');
   }
-  (c.itens || []).forEach(v => {
-    const i = document.querySelector('#ct-itens .chip[data-v="' + v + '"]');
-    if (i) i.classList.add('on-green');
-  });
-  document.getElementById('ct-obs').value = c.obs || '';
-  // Espécies pré-preenchidas
-  document.getElementById('ct-especies').innerHTML = '';
-  const esp = c.especies || [];
-  if (esp.length) esp.forEach(s => addEspecieRow(s));
-  else addEspecieRow();
-  // Fotos antigas
-  const fs = c.fotos || [];
-  document.getElementById('ct-fotos-antigas').innerHTML = fs.length
-    ? `<div class="page-sub" style="margin:4px 0 6px">Fotos já enviadas (toque para abrir no Drive)</div>
-       <div class="foto-strip">${fs.map(f => `<a href="${fullDrive(f.drive_file_id)}" target="_blank" rel="noopener"><img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.style.opacity=0.25"></a>`).join('')}</div>`
-    : '';
-  // UI de edição
-  document.getElementById('ct-form-title').textContent = 'Editando canteiro ' + (c.seq || '');
-  document.getElementById('ct-form-cancel').style.display = 'inline-flex';
-  document.getElementById('ct-save-btn').textContent = 'Salvar alterações';
-  renderCanteiros();
-  document.getElementById('ct-form').scrollIntoView({ behavior: 'smooth' });
-}
-
-funct
+  (c.itens || []).forEac
