@@ -2147,4 +2147,550 @@ function editarCanteiro(id) {
     const s = document.querySelector('#ct-situacao .chip[data-v="' + c.situacao + '"]');
     if (s) s.classList.add('on-green');
   }
-  (c.itens || []).forEac
+  (c.itens || []).forEach(v => {
+    const i = document.querySelector('#ct-itens .chip[data-v="' + v + '"]');
+    if (i) i.classList.add('on-green');
+  });
+  document.getElementById('ct-obs').value = c.obs || '';
+  // Espécies pré-preenchidas
+  document.getElementById('ct-especies').innerHTML = '';
+  const esp = c.especies || [];
+  if (esp.length) esp.forEach(s => addEspecieRow(s));
+  else addEspecieRow();
+  // Fotos antigas
+  const fs = c.fotos || [];
+  document.getElementById('ct-fotos-antigas').innerHTML = fs.length
+    ? `<div class="page-sub" style="margin:4px 0 6px">Fotos já enviadas (toque para abrir no Drive)</div>
+       <div class="foto-strip">${fs.map(f => `<a href="${fullDrive(f.drive_file_id)}" target="_blank" rel="noopener"><img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.style.opacity=0.25"></a>`).join('')}</div>`
+    : '';
+  // UI de edição
+  document.getElementById('ct-form-title').textContent = 'Editando canteiro ' + (c.seq || '');
+  document.getElementById('ct-form-cancel').style.display = 'inline-flex';
+  document.getElementById('ct-save-btn').textContent = 'Salvar alterações';
+  renderCanteiros();
+  document.getElementById('ct-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function coletarLinhasEspecies(idCanteiro) {
+  const out = [];
+  for (const row of document.querySelectorAll('.esp-row')) {
+    const sel = row.querySelector('.er-sel').value;
+    const nome = sel === '__livre__' ? row.querySelector('.er-livre').value.trim() : sel;
+    const mudas = parseInt(row.querySelector('.er-mudas').value || '0', 10);
+    if (!nome || !mudas) continue;
+    const cat = catalogo().find(c => c.nome_popular === nome);
+    out.push({
+      id_registro: uuid(), id_canteiro: idCanteiro,
+      id_especie: cat ? cat.id_especie : null,
+      especie_texto: nome,
+      qtd_mudas: mudas,
+      qtd_caixas: Math.round(mudas / CX_MUDAS * 10) / 10,
+      origem_qtd: row.querySelector('.er-mudas').dataset.origem || 'manual',
+      condicao: row.querySelector('.er-cond').value,
+      criado_em: agora(), criado_por: userEmail
+    });
+  }
+  return out;
+}
+
+function coletarCamposCanteiro() {
+  const { area, vias } = areaCanteiro();
+  return {
+    formato: formatoAtual,
+    comp_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-comp').value) || null) : null,
+    larg_m: formatoAtual === 'retangular' ? (parseFloat(document.getElementById('ct-larg').value) || null) : null,
+    diametro_m: formatoAtual === 'circular' ? (parseFloat(document.getElementById('ct-diam').value) || null) : null,
+    vias,
+    area_m2: area ? Math.round(area * 100) / 100 : null,
+    situacao: chipsMarcados('ct-situacao', 'on-green')[0] || null,
+    itens: chipsMarcados('ct-itens', 'on-green'),
+    obs: document.getElementById('ct-obs').value.trim() || null
+  };
+}
+
+async function salvarCanteiro() {
+  const e = espAtual();
+  if (!e) return showPage('jard');
+
+  if (canteiroEditando) {
+    // === EDIÇÃO ===
+    const id = canteiroEditando;
+    const campos = coletarCamposCanteiro();
+    const especies = coletarLinhasEspecies(id);
+    const fila = await idbAll('fila');
+    const it = fila.find(x => x.tipo === 'insert' && x.tabela === 'jard_canteiros' && x.dados?.id_canteiro === id);
+    // Espécies: substituição total (remove pendentes antigas / delete no servidor, insere as novas)
+    await cancelarPendentes(x => x.tipo === 'insert' && x.tabela === 'jard_especies' && x.dados?.id_canteiro === id);
+    if (it) {
+      it.dados = { ...it.dados, ...campos };
+      await idbPut('fila', it);
+    } else {
+      await enqueue({ tipo: 'update', tabela: 'jard_canteiros', filter: { id_canteiro: 'eq.' + id }, patch: campos });
+      await enqueue({ tipo: 'delete', tabela: 'jard_especies', filter: { id_canteiro: 'eq.' + id } });
+    }
+    for (const s of especies) await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: s });
+    await enfileirarFotos('ct', 'jard_canteiro', id, (e.codigo || 'JD') + '_c' + (canteirosDoEspaco.find(c => c.id_canteiro === id)?.seq || 'edit'));
+    const idx = canteirosDoEspaco.findIndex(c => c.id_canteiro === id);
+    if (idx >= 0) canteirosDoEspaco[idx] = { ...canteirosDoEspaco[idx], ...campos, especies };
+    const seqEditado = canteirosDoEspaco[idx]?.seq || '';
+    sairEdicaoCanteiro();
+    showToast('Canteiro ' + seqEditado + ' atualizado.', 'success');
+    return;
+  }
+
+  // === NOVO ===
+  const maxSeq = canteirosDoEspaco.reduce((m, c) => Math.max(m, c.seq || 0), 0);
+  const idCanteiro = uuid();
+  const campos = coletarCamposCanteiro();
+  const dados = {
+    id_canteiro: idCanteiro,
+    id_espaco: e.id_espaco,
+    seq: maxSeq + 1,
+    ...campos,
+    criado_em: agora(),
+    criado_por: userEmail
+  };
+  await enqueue({ tipo: 'insert', tabela: 'jard_canteiros', dados });
+  const especies = coletarLinhasEspecies(idCanteiro);
+  for (const s of especies) await enqueue({ tipo: 'insert', tabela: 'jard_especies', dados: s });
+  await enfileirarFotos('ct', 'jard_canteiro', idCanteiro, (e.codigo || 'JD') + '_c' + dados.seq);
+
+  canteirosDoEspaco.push({ ...dados, especies, fotos: [], _pendente: true });
+  const cache = cacheEspacos().map(c => c.id_espaco === e.id_espaco ? { ...c, canteiros: canteirosDoEspaco.length } : c);
+  LS.set('cache_espacos', JSON.stringify(cache));
+
+  resetCanteiroForm();
+  renderCanteiros();
+  showToast('Canteiro ' + dados.seq + ' salvo.', 'success');
+  window.scrollTo(0, 0);
+}
+
+async function excluirCanteiro(id) {
+  const c = canteirosDoEspaco.find(x => x.id_canteiro === id);
+  if (!c) return;
+  if (!confirm(`Excluir canteiro ${c.seq}${c.formato ? ' (' + (FORMATO_L[c.formato] || c.formato) + ')' : ''} e suas espécies?\n\nEssa ação não pode ser desfeita.`)) return;
+  await cancelarPendentes(it =>
+    (it.tipo === 'insert' && it.tabela === 'jard_canteiros' && it.dados?.id_canteiro === id) ||
+    (it.tipo === 'insert' && it.tabela === 'jard_especies'  && it.dados?.id_canteiro === id) ||
+    (it.tipo === 'update' && it.tabela === 'jard_canteiros' && it.filter?.id_canteiro === 'eq.' + id) ||
+    (it.tipo === 'foto'   && it.entidade === 'jard_canteiro' && it.idEntidade === id)
+  );
+  if (!c._pendente) {
+    await enqueue({ tipo: 'delete', tabela: 'jard_canteiros', filter: { id_canteiro: 'eq.' + id } });
+  }
+  canteirosDoEspaco = canteirosDoEspaco.filter(x => x.id_canteiro !== id);
+  const e = espAtual();
+  if (e) {
+    const cache = cacheEspacos().map(x => x.id_espaco === e.id_espaco ? { ...x, canteiros: canteirosDoEspaco.length } : x);
+    LS.set('cache_espacos', JSON.stringify(cache));
+  }
+  if (canteiroEditando === id) sairEdicaoCanteiro();
+  else renderCanteiros();
+  showToast('Canteiro excluído.', 'success');
+}
+
+/* ================================================================
+   MÓDULO CONSULTA (desktop) — tabela, detalhe, galeria navegável
+   ================================================================ */
+let consTabAtual = 'arbo';
+let consDados = [];          // linhas carregadas (ruas OU espacos, com filhos e fotos)
+let consFotosFlat = [];      // p/ lightbox: [{groupId, groupLabel, url, capSub}]
+let lbGroups = [];           // grupos (pontos/canteiros) com fotos, p/ navegação
+let lbGroupIdx = 0, lbPhotoIdx = 0;
+
+function abrirConsulta() {
+  showPage('consulta');
+  renderFiltros();
+  consBuscar();
+}
+
+function consTab(t) {
+  consTabAtual = t;
+  document.querySelectorAll('.cons-tab').forEach(b => b.classList.toggle('active', b.dataset.t === t));
+  renderFiltros();
+  document.getElementById('cons-resultado').innerHTML = '';
+  document.getElementById('cons-count').textContent = '';
+  consBuscar();
+}
+
+function renderFiltros() {
+  const el = document.getElementById('cons-filtros');
+  if (consTabAtual === 'arbo') {
+    el.innerHTML = `
+      <div><label>Rua</label><input type="text" id="f-rua" placeholder="nome da rua"></div>
+      <div><label>Bairro</label><input type="text" id="f-bairro" placeholder="bairro"></div>
+      <div><label>Situação do trecho</label>
+        <select id="f-status"><option value="">todas</option><option value="em_andamento">Em andamento</option><option value="encerrado">Encerrado</option></select>
+      </div>
+      <div><label>Só com foto</label>
+        <select id="f-foto"><option value="">não filtrar</option><option value="1">só com foto</option></select>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div><label>Nome / código</label><input type="text" id="f-nome" placeholder="praça, JD-0003…"></div>
+      <div><label>Bairro</label><input type="text" id="f-bairro" placeholder="bairro"></div>
+      <div><label>Tipo</label>
+        <select id="f-tipo"><option value="">todos</option><option value="praca">Praça</option><option value="rotatoria">Rotatória</option><option value="canteiro_rua">Canteiro de rua</option><option value="floreira">Floreira</option><option value="jardim">Jardim</option><option value="outro">Outro</option></select>
+      </div>
+      <div><label>Situação canteiro</label>
+        <select id="f-situacao"><option value="">todas</option><option value="existente">Existente</option><option value="criar">Criar</option><option value="reformular">Reformular</option></select>
+      </div>`;
+  }
+}
+
+function consLimparFiltros() { renderFiltros(); consBuscar(); }
+function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+
+async function consBuscar() {
+  const box = document.getElementById('cons-resultado');
+  if (!sessionValida() || !navigator.onLine) {
+    box.innerHTML = '<div class="empty">Conecte-se à internet para consultar os dados no servidor.</div>';
+    document.getElementById('cons-count').textContent = '';
+    return;
+  }
+  box.innerHTML = '<div class="empty">Carregando…</div>';
+  try {
+    consTabAtual === 'arbo' ? await buscarArbo() : await buscarJard();
+  } catch (e) {
+    box.innerHTML = '<div class="empty">Erro ao consultar: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+/* ---------- ARBORIZAÇÃO ---------- */
+async function buscarArbo() {
+  // Puxa ruas → trechos → pontos aninhados, e fotos à parte
+  let q = 'select=id_rua,nome_rua,bairro,criado_em,arbo_trechos(id_trecho,quadra,num_inicio,num_fim,status,arbo_pontos(id_ponto,seq,numeracao,lat,lng,impedimentos,impedimento_outro,especie_plano,especie_sugerida,distancia_anterior_m,obs,status,criado_em,criado_por))&order=criado_em.desc';
+  const rua = val('f-rua'), bairro = val('f-bairro');
+  if (rua) q += `&nome_rua=ilike.*${encodeURIComponent(rua)}*`;
+  if (bairro) q += `&bairro=ilike.*${encodeURIComponent(bairro)}*`;
+  const ruas = await sbSelect('arbo_ruas', q) || [];
+
+  // Coleta todos os id_ponto p/ buscar fotos
+  const pts = [];
+  ruas.forEach(r => (r.arbo_trechos || []).forEach(t => (t.arbo_pontos || []).forEach(p => pts.push(p))));
+  const fotosByPonto = await carregarFotos('arbo_ponto', pts.map(p => p.id_ponto));
+  pts.forEach(p => p.fotos = fotosByPonto[p.id_ponto] || []);
+
+  // Filtros locais (status do trecho, só com foto)
+  const fStatus = val('f-status'), soFoto = val('f-foto');
+  const linhas = [];
+  ruas.forEach(r => {
+    (r.arbo_trechos || []).forEach(t => {
+      if (fStatus && t.status !== fStatus) return;
+      const pontos = (t.arbo_pontos || []).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+      const nFotos = pontos.reduce((s,p)=>s+(p.fotos?.length||0),0);
+      if (soFoto === '1' && nFotos === 0) return;
+      linhas.push({ rua: r, trecho: t, pontos, nFotos });
+    });
+  });
+  consDados = linhas;
+  renderTabelaArbo(linhas);
+}
+
+function renderTabelaArbo(linhas) {
+  document.getElementById('cons-count').textContent = linhas.length + ' trecho(s)';
+  const box = document.getElementById('cons-resultado');
+  if (!linhas.length) { box.innerHTML = '<div class="empty">Nenhum resultado com esses filtros.</div>'; return; }
+  const rows = linhas.map((l, i) => {
+    const faixa = l.trecho.num_inicio && l.trecho.num_fim ? l.trecho.num_inicio + '–' + l.trecho.num_fim : (l.trecho.num_inicio || l.trecho.num_fim || '—');
+    return `
+    <tr onclick="abrirDetalheArbo(${i})">
+      <td data-l="Rua">${escapeHtml(l.rua.nome_rua)}</td>
+      <td data-l="Trecho">${l.trecho.quadra ? 'Q ' + escapeHtml(l.trecho.quadra) : 'sem quadra'} · ${escapeHtml(faixa)}</td>
+      <td data-l="Bairro">${escapeHtml(l.rua.bairro || '—')}</td>
+      <td data-l="Pontos">${l.pontos.length}</td>
+      <td data-l="Fotos">${l.nFotos ? `<span class="cons-photo-count">📷 ${l.nFotos}</span>` : '—'}</td>
+      <td data-l="Situação">${l.trecho.status === 'encerrado' ? 'Encerrado' : 'Em andamento'}</td>
+    </tr>`;
+  }).join('');
+  box.innerHTML = `<table class="cons-table"><thead><tr>
+    <th>Rua</th><th>Trecho</th><th>Bairro</th><th>Pontos</th><th>Fotos</th><th>Situação</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+const IMPED_L = { poste:'Poste', garagem:'Garagem', comercio:'Comércio', guia_rebaixada:'Guia rebaixada', placa:'Placa', esgoto:'Esgoto', hidrante:'Hidrante', outro:'Outro' };
+
+function abrirDetalheArbo(i) {
+  const l = consDados[i];
+  const faixa = l.trecho.num_inicio && l.trecho.num_fim ? l.trecho.num_inicio + '–' + l.trecho.num_fim : (l.trecho.num_inicio || l.trecho.num_fim || '');
+  document.getElementById('drawer-title').textContent = l.rua.nome_rua;
+  document.getElementById('drawer-sub').textContent = [l.trecho.quadra ? 'Quadra ' + l.trecho.quadra : 'sem quadra', faixa, l.rua.bairro].filter(Boolean).join(' · ');
+
+  // Monta grupos p/ o lightbox (um grupo por ponto que tem foto)
+  lbGroups = l.pontos.filter(p => (p.fotos||[]).length).map(p => ({
+    label: 'Ponto ' + (p.seq || '?'),
+    sub: [p.numeracao && 'nº ' + p.numeracao, p.especie_plano].filter(Boolean).join(' · '),
+    fotos: p.fotos
+  }));
+
+  const pontosHtml = l.pontos.map(p => {
+    const imp = (p.impedimentos||[]).map(v=>IMPED_L[v]||v).join(', ');
+    const det = [p.numeracao && 'nº ' + p.numeracao, p.especie_plano && 'Plano: ' + p.especie_plano,
+                 p.especie_sugerida && 'Sugestão: ' + p.especie_sugerida,
+                 p.distancia_anterior_m && p.distancia_anterior_m + ' m', imp, p.obs].filter(Boolean).join(' · ');
+    const fs = p.fotos || [];
+    const gIdx = lbGroups.findIndex(g => g.label === 'Ponto ' + (p.seq || '?'));
+    const strip = fs.length ? `<div class="foto-strip">${fs.map((f,fi)=>
+      `<img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.style.opacity=0.25" onclick="lbOpen(${gIdx},${fi})">`).join('')}</div>` : '';
+    return `<div class="sub-item">
+      <div class="si-t">Ponto ${p.seq || '?'} ${p.status==='planejado'?'<span class="li-quadra" style="background:var(--warning-light);color:var(--warning)">planejado</span>':''}</div>
+      <div class="si-s">${escapeHtml(det) || 'sem detalhes'}</div>
+      ${p.lat&&p.lng?`<div class="si-s"><a href="https://www.google.com/maps?q=${p.lat},${p.lng}" target="_blank" rel="noopener">📍 ${(+p.lat).toFixed(5)}, ${(+p.lng).toFixed(5)}</a></div>`:''}
+      ${strip}
+    </div>`;
+  }).join('');
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="det-row"><span class="dk">Pontos</span><span class="dv">${l.pontos.length}</span></div>
+    <div class="det-row"><span class="dk">Fotos</span><span class="dv">${l.nFotos}</span></div>
+    <div class="det-row"><span class="dk">Situação</span><span class="dv">${l.trecho.status==='encerrado'?'Encerrado':'Em andamento'}</span></div>
+    <div class="det-sec-title">Pontos do trecho</div>
+    ${pontosHtml || '<div class="empty">Nenhum ponto lançado.</div>'}`;
+  abrirDrawer();
+}
+
+/* ---------- JARDINAGEM ---------- */
+async function buscarJard() {
+  let q = 'select=id_espaco,codigo,nome,tipo,endereco,bairro,lat,lng,obs,criado_em,jard_canteiros(id_canteiro,seq,formato,comp_m,larg_m,diametro_m,vias,area_m2,situacao,itens,obs,jard_especies(especie_texto,qtd_mudas,qtd_caixas,condicao))&order=criado_em.desc';
+  const nome = val('f-nome'), bairro = val('f-bairro'), tipo = val('f-tipo');
+  if (nome) q += `&or=(nome.ilike.*${encodeURIComponent(nome)}*,codigo.ilike.*${encodeURIComponent(nome)}*)`;
+  if (bairro) q += `&bairro=ilike.*${encodeURIComponent(bairro)}*`;
+  if (tipo) q += `&tipo=eq.${tipo}`;
+  const espacos = await sbSelect('jard_espacos', q) || [];
+
+  const cants = [];
+  espacos.forEach(e => (e.jard_canteiros||[]).forEach(c => cants.push(c)));
+  const fotosByCant = await carregarFotos('jard_canteiro', cants.map(c => c.id_canteiro));
+  // fotos do espaço também
+  const fotosByEsp = await carregarFotos('jard_espaco', espacos.map(e => e.id_espaco));
+  cants.forEach(c => c.fotos = fotosByCant[c.id_canteiro] || []);
+  espacos.forEach(e => e.fotos = fotosByEsp[e.id_espaco] || []);
+
+  const fSit = val('f-situacao');
+  const linhas = espacos.map(e => {
+    let canteiros = (e.jard_canteiros||[]).slice().sort((a,b)=>(a.seq||0)-(b.seq||0));
+    if (fSit) canteiros = canteiros.filter(c => c.situacao === fSit);
+    const nFotos = (e.fotos?.length||0) + canteiros.reduce((s,c)=>s+(c.fotos?.length||0),0);
+    const areaTot = canteiros.reduce((s,c)=>s+(+c.area_m2||0),0);
+    const mudasTot = canteiros.reduce((s,c)=>s+(c.jard_especies||[]).reduce((a,x)=>a+(+x.qtd_mudas||0),0),0);
+    return { espaco: e, canteiros, nFotos, areaTot, mudasTot };
+  }).filter(l => !fSit || l.canteiros.length);
+  consDados = linhas;
+  renderTabelaJard(linhas);
+}
+
+const TIPO_L2 = { praca:'Praça', rotatoria:'Rotatória', canteiro_rua:'Canteiro de rua', floreira:'Floreira', jardim:'Jardim', outro:'Outro' };
+
+function renderTabelaJard(linhas) {
+  document.getElementById('cons-count').textContent = linhas.length + ' espaço(s)';
+  const box = document.getElementById('cons-resultado');
+  if (!linhas.length) { box.innerHTML = '<div class="empty">Nenhum resultado com esses filtros.</div>'; return; }
+  const rows = linhas.map((l,i) => `
+    <tr onclick="abrirDetalheJard(${i})">
+      <td data-l="Espaço">${escapeHtml(l.espaco.nome)}</td>
+      <td data-l="Código">${escapeHtml(l.espaco.codigo || '—')}</td>
+      <td data-l="Tipo">${TIPO_L2[l.espaco.tipo]||l.espaco.tipo||'—'}</td>
+      <td data-l="Bairro">${escapeHtml(l.espaco.bairro || '—')}</td>
+      <td data-l="Canteiros">${l.canteiros.length}</td>
+      <td data-l="Área">${l.areaTot ? l.areaTot.toFixed(1).replace('.',',')+' m²' : '—'}</td>
+      <td data-l="Fotos">${l.nFotos ? `<span class="cons-photo-count">📷 ${l.nFotos}</span>` : '—'}</td>
+    </tr>`).join('');
+  box.innerHTML = `<table class="cons-table"><thead><tr>
+    <th>Espaço</th><th>Código</th><th>Tipo</th><th>Bairro</th><th>Canteiros</th><th>Área total</th><th>Fotos</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function abrirDetalheJard(i) {
+  const l = consDados[i];
+  document.getElementById('drawer-title').textContent = l.espaco.nome;
+  document.getElementById('drawer-sub').textContent = [l.espaco.codigo, TIPO_L2[l.espaco.tipo]||l.espaco.tipo, l.espaco.bairro].filter(Boolean).join(' · ');
+
+  lbGroups = [];
+  if ((l.espaco.fotos||[]).length) lbGroups.push({ label: 'Espaço', sub: l.espaco.nome, fotos: l.espaco.fotos });
+  l.canteiros.forEach(c => { if ((c.fotos||[]).length) lbGroups.push({ label: 'Canteiro ' + (c.seq||'?'), sub: FORMATO_L[c.formato]||c.formato||'', fotos: c.fotos }); });
+
+  const espFotos = (l.espaco.fotos||[]);
+  const gEsp = lbGroups.findIndex(g => g.label === 'Espaço');
+  const espStrip = espFotos.length ? `<div class="foto-strip">${espFotos.map((f,fi)=>
+    `<img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" onerror="this.style.opacity=0.25" onclick="lbOpen(${gEsp},${fi})">`).join('')}</div>` : '';
+
+  const cantHtml = l.canteiros.map(c => {
+    const esp = (c.jard_especies||[]).map(s=>`${s.especie_texto||''} ${s.qtd_mudas?'×'+s.qtd_mudas:''}${s.qtd_caixas?' ('+s.qtd_caixas+'cx)':''}`).filter(x=>x.trim()).join(', ');
+    const dim = c.formato==='circular' ? `⌀ ${c.diametro_m||'?'} m` : c.formato==='retangular' ? `${c.comp_m||'?'}×${c.larg_m||'?'} m` : 'área livre';
+    const det = [dim, c.vias>1&&c.vias+' vias', c.area_m2&&(+c.area_m2).toFixed(1).replace('.',',')+' m²', c.situacao, esp, c.obs].filter(Boolean).join(' · ');
+    const fs = c.fotos||[];
+    const gIdx = lbGroups.findIndex(g => g.label === 'Canteiro ' + (c.seq||'?'));
+    const strip = fs.length ? `<div class="foto-strip">${fs.map((f,fi)=>
+      `<img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" onerror="this.style.opacity=0.25" onclick="lbOpen(${gIdx},${fi})">`).join('')}</div>` : '';
+    return `<div class="sub-item">
+      <div class="si-t">Canteiro ${c.seq||'?'} — ${FORMATO_L[c.formato]||c.formato||''}</div>
+      <div class="si-s">${escapeHtml(det)||'sem detalhes'}</div>${strip}</div>`;
+  }).join('');
+
+  document.getElementById('drawer-body').innerHTML = `
+    <div class="det-row"><span class="dk">Endereço</span><span class="dv">${escapeHtml(l.espaco.endereco||'—')}</span></div>
+    <div class="det-row"><span class="dk">Canteiros</span><span class="dv">${l.canteiros.length}</span></div>
+    <div class="det-row"><span class="dk">Área total</span><span class="dv">${l.areaTot?l.areaTot.toFixed(1).replace('.',',')+' m²':'—'}</span></div>
+    <div class="det-row"><span class="dk">Mudas (soma)</span><span class="dv">${l.mudasTot||0}</span></div>
+    ${l.espaco.lat&&l.espaco.lng?`<div class="det-row"><span class="dk">GPS</span><span class="dv"><a href="https://www.google.com/maps?q=${l.espaco.lat},${l.espaco.lng}" target="_blank" rel="noopener">📍 abrir</a></span></div>`:''}
+    ${espStrip?`<div class="det-sec-title">Fotos do espaço</div>${espStrip}`:''}
+    <div class="det-sec-title">Canteiros</div>
+    ${cantHtml || '<div class="empty">Nenhum canteiro.</div>'}`;
+  abrirDrawer();
+}
+
+/* ---------- Fotos: busca em lote ---------- */
+async function carregarFotos(entidade, ids) {
+  if (!ids || !ids.length) return {};
+  const map = {};
+  // chunk p/ evitar URL gigante
+  for (let i = 0; i < ids.length; i += 60) {
+    const chunk = ids.slice(i, i+60);
+    try {
+      const fs = await sbSelect('fotos',
+        `select=drive_file_id,web_link,id_entidade&entidade=eq.${entidade}&id_entidade=in.(${chunk.join(',')})`) || [];
+      fs.forEach(f => (map[f.id_entidade] = map[f.id_entidade] || []).push(f));
+    } catch(e) { console.warn('fotos lote:', e.message); }
+  }
+  return map;
+}
+
+/* ---------- Drawer ---------- */
+function abrirDrawer() {
+  document.getElementById('drawer-backdrop').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function fecharDrawer() {
+  document.getElementById('drawer-backdrop').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+/* ---------- Lightbox navegável ---------- */
+function driveView(id) { return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1200'; }
+
+function lbOpen(groupIdx, photoIdx) {
+  if (groupIdx < 0 || !lbGroups[groupIdx]) return;
+  lbGroupIdx = groupIdx; lbPhotoIdx = photoIdx || 0;
+  document.getElementById('lightbox').classList.add('open');
+  lbRender();
+}
+function lbClose() { document.getElementById('lightbox').classList.remove('open'); }
+
+function lbRender() {
+  const g = lbGroups[lbGroupIdx];
+  if (!g) return;
+  const f = g.fotos[lbPhotoIdx];
+  document.getElementById('lb-img').src = driveView(f.drive_file_id);
+  document.getElementById('lb-cap').innerHTML = `${escapeHtml(g.label)} — foto ${lbPhotoIdx+1}/${g.fotos.length}<small>${escapeHtml(g.sub||'')}</small>`;
+  document.getElementById('lb-prev').disabled = lbPhotoIdx === 0;
+  document.getElementById('lb-next').disabled = lbPhotoIdx === g.fotos.length - 1;
+  document.getElementById('lb-jump-prev').disabled = lbGroupIdx === 0;
+  document.getElementById('lb-jump-next').disabled = lbGroupIdx === lbGroups.length - 1;
+  // filmstrip do grupo atual
+  document.getElementById('lb-film').innerHTML = g.fotos.map((ff,i)=>
+    `<img src="${thumbDrive(ff.drive_file_id)}" class="${i===lbPhotoIdx?'on':''}" onclick="lbGo(${i})" onerror="this.style.opacity=0.2">`).join('');
+}
+function lbGo(i) { lbPhotoIdx = i; lbRender(); }
+function lbStep(d) {
+  const g = lbGroups[lbGroupIdx];
+  const n = lbPhotoIdx + d;
+  if (n >= 0 && n < g.fotos.length) { lbPhotoIdx = n; lbRender(); }
+}
+function lbJump(d) {
+  const n = lbGroupIdx + d;
+  if (n >= 0 && n < lbGroups.length) { lbGroupIdx = n; lbPhotoIdx = 0; lbRender(); }
+}
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') lbClose();
+  else if (e.key === 'ArrowLeft') lbStep(-1);
+  else if (e.key === 'ArrowRight') lbStep(1);
+  else if (e.key === 'ArrowDown') lbJump(1);
+  else if (e.key === 'ArrowUp') lbJump(-1);
+});
+
+/* ---------- Export CSV ---------- */
+function csvCell(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v).replace(/"/g, '""');
+  return /[",;\n]/.test(s) ? `"${s}"` : s;
+}
+function baixarCSV(nome, linhas) {
+  const csv = linhas.map(r => r.map(csvCell).join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function consExportarCSV() {
+  if (!consDados.length) return showToast('Nada para exportar. Faça uma busca primeiro.', 'error');
+  if (consTabAtual === 'arbo') {
+    const rows = [['Rua','Bairro','Quadra','Faixa','Ponto','Numeração','Lat','Lng','Espécie plano','Sugestão','Distância (m)','Impedimentos','Fotos','Obs','Situação trecho']];
+    consDados.forEach(l => {
+      const faixa = [l.trecho.num_inicio, l.trecho.num_fim].filter(Boolean).join('-');
+      if (!l.pontos.length) rows.push([l.rua.nome_rua,l.rua.bairro,l.trecho.quadra,faixa,'','','','','','','','','0','',l.trecho.status]);
+      l.pontos.forEach(p => rows.push([
+        l.rua.nome_rua, l.rua.bairro, l.trecho.quadra, faixa, p.seq, p.numeracao,
+        p.lat, p.lng, p.especie_plano, p.especie_sugerida, p.distancia_anterior_m,
+        (p.impedimentos||[]).map(v=>IMPED_L[v]||v).join('|'), (p.fotos||[]).length, p.obs, l.trecho.status
+      ]));
+    });
+    baixarCSV('arborizacao_smmacl.csv', rows);
+  } else {
+    const rows = [['Espaço','Código','Tipo','Bairro','Endereço','Canteiro','Formato','Comp (m)','Larg (m)','Diâm (m)','Vias','Área (m²)','Situação','Espécies','Mudas','Fotos','Obs']];
+    consDados.forEach(l => {
+      if (!l.canteiros.length) rows.push([l.espaco.nome,l.espaco.codigo,TIPO_L2[l.espaco.tipo]||l.espaco.tipo,l.espaco.bairro,l.espaco.endereco,'','','','','','','','','','','0','']);
+      l.canteiros.forEach(c => {
+        const esp = (c.jard_especies||[]).map(s=>`${s.especie_texto} ×${s.qtd_mudas||0}`).join('|');
+        const mudas = (c.jard_especies||[]).reduce((a,x)=>a+(+x.qtd_mudas||0),0);
+        rows.push([l.espaco.nome,l.espaco.codigo,TIPO_L2[l.espaco.tipo]||l.espaco.tipo,l.espaco.bairro,l.espaco.endereco,
+          c.seq,FORMATO_L[c.formato]||c.formato,c.comp_m,c.larg_m,c.diametro_m,c.vias,c.area_m2,c.situacao,esp,mudas,(c.fotos||[]).length,c.obs]);
+      });
+    });
+    baixarCSV('jardinagem_smmacl.csv', rows);
+  }
+  showToast('CSV gerado.', 'success');
+}
+
+/* ================================================================
+   FILA (tela)
+   ================================================================ */
+const ROTULO_TIPO = { insert: 'Registro', update: 'Atualização', delete: 'Exclusão', foto: 'Foto' };
+async function renderFila() {
+  const itens = (await idbAll('fila')).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+  const el = document.getElementById('fila-lista');
+  document.getElementById('fila-sub').textContent = itens.length
+    ? itens.length + ' registro(s) na fila.'
+    : 'Tudo sincronizado.';
+  if (!itens.length) { el.innerHTML = '<div class="empty">Nada pendente. Todos os registros já estão no BigQuery.</div>'; return; }
+  el.innerHTML = itens.map(it => `
+    <div class="list-item" style="cursor:default">
+      <div>
+        <div class="li-title">${ROTULO_TIPO[it.tipo] || it.tipo}${it.tabela ? ' · ' + it.tabela : ''}${it.entidade ? ' · ' + it.entidade : ''}</div>
+        <div class="li-sub">${new Date(it.criado_em).toLocaleString('pt-BR')}${it.erro ? ' — ' + escapeHtml(it.erro) : ''}</div>
+      </div>
+      <span class="badge ${it.status === 'erro' ? 'red' : 'warn'}">${it.status === 'erro' ? 'Erro' : 'Pendente'}</span>
+    </div>`).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ── BOOT (cada etapa isolada: uma falha não derruba as demais) ── */
+(async function init() {
+  const passo = async (nome, fn) => {
+    try { await fn(); } catch (e) { console.warn('init/' + nome + ':', e); showToast('Aviso (' + nome + '): ' + e.message, 'error'); }
+  };
+  await passo('banco-local', () => abrirDB());
+  await passo('fila', () => atualizarBadgeFila());
+  await passo('chips', () => { montarChips('pt-imped', IMPEDIMENTOS, 'on'); montarChips('ct-itens', ITENS_CANTEIRO, 'on-green'); });
+  await passo('especies', () => montarSelectsEspecies());
+  await passo('supabase', () => bootSupabase());
+  await passo('auth-ui', () => { updateAuthUI(!!session); if (session) onSessionReady(); });
+})();
+</script>
+</body>
+</html>
