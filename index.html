@@ -606,6 +606,7 @@
   <h2>Fila de sincronização</h2>
   <div class="page-sub" id="fila-sub">Registros aguardando envio ao Supabase.</div>
   <button class="btn btn-primary" onclick="drainQueue(true)">Sincronizar agora</button>
+  <button class="btn btn-danger-ghost" style="margin-top:8px" onclick="limparErrosFila()">Limpar registros com erro</button>
   <div id="fila-lista" style="margin-top:14px"></div>
 </section>
 
@@ -1071,6 +1072,13 @@ async function drainQueue(manual) {
         ok++;
       } catch (e) {
         if (e.message === 'SEM_SESSION') break;
+        // Já existe no banco (reenvio de item que na verdade foi gravado): considera OK
+        if (/duplicate key|already exists|23505/i.test(e.message)) {
+          if (it.tipo === 'foto' && it.blobId) { try { await idbDel('blobs', it.blobId); } catch(_) {} }
+          await idbDel('fila', it.id);
+          ok++;
+          continue;
+        }
         it.status = 'erro'; it.erro = e.message;
         await idbPut('fila', it);
         falha++;
@@ -2997,6 +3005,20 @@ function consExportarCSV() {
    FILA (tela)
    ================================================================ */
 const ROTULO_TIPO = { insert: 'Registro', update: 'Atualização', delete: 'Exclusão', foto: 'Foto' };
+
+async function limparErrosFila() {
+  const erros = (await idbAll('fila')).filter(it => it.status === 'erro');
+  if (!erros.length) return showToast('Não há registros com erro.', 'info');
+  if (!confirm(`Remover ${erros.length} registro(s) com erro da fila?\n\nOs dados que não sincronizaram serão descartados.`)) return;
+  for (const it of erros) {
+    if (it.tipo === 'foto' && it.blobId) { try { await idbDel('blobs', it.blobId); } catch(_) {} }
+    await idbDel('fila', it.id);
+  }
+  atualizarBadgeFila();
+  renderFila();
+  showToast(`${erros.length} registro(s) removido(s) da fila.`, 'success');
+}
+
 async function renderFila() {
   const itens = (await idbAll('fila')).sort((a, b) => b.criado_em.localeCompare(a.criado_em));
   const el = document.getElementById('fila-lista');
