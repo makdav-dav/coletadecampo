@@ -604,7 +604,7 @@
 <!-- ============ FILA ============ -->
 <section class="page" id="page-fila">
   <h2>Fila de sincronização</h2>
-  <div class="page-sub" id="fila-sub">Registros aguardando envio ao Supabase e ao Drive.</div>
+  <div class="page-sub" id="fila-sub">Registros aguardando envio ao Supabase.</div>
   <button class="btn btn-primary" onclick="drainQueue(true)">Sincronizar agora</button>
   <div id="fila-lista" style="margin-top:14px"></div>
 </section>
@@ -756,6 +756,7 @@ const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
 const CX_MUDAS = 15;            // 1 caixa = 15 mudas
 const ESPACAMENTO_M2 = 0.0225;  // 15 x 15 cm por muda
+const FOTOS_BUCKET = 'fotos-campo';  // bucket público do Supabase Storage p/ as fotos
 
 let sb = null;
 let session = null;
@@ -779,9 +780,7 @@ function handleAuth() {
   sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      scopes: 'https://www.googleapis.com/auth/drive.file',
-      redirectTo: window.location.origin + window.location.pathname,
-      queryParams: { prompt: 'consent' }
+      redirectTo: window.location.origin + window.location.pathname
     }
   });
 }
@@ -997,6 +996,17 @@ async function pastaDrive() {
   return j.id;
 }
 
+/* Upload da foto pro Supabase Storage (bucket público).
+   Usa a sessão do próprio coletor — funciona pra qualquer conta logada. */
+async function uploadFotoStorage(blob, path) {
+  const { error } = await sb.storage.from(FOTOS_BUCKET).upload(path, blob, {
+    contentType: 'image/jpeg', upsert: true
+  });
+  if (error) throw new Error('Storage: ' + error.message);
+  const { data } = sb.storage.from(FOTOS_BUCKET).getPublicUrl(path);
+  return { path, url: data.publicUrl };
+}
+
 async function uploadDrive(blob, nome) {
   if (!driveTokenValido()) throw new Error('SEM_TOKEN_DRIVE');
   const folder = await pastaDrive();
@@ -1024,7 +1034,7 @@ async function drainQueue(manual) {
   syncing = true;
   try {
     const itens = (await idbAll('fila')).sort((a, b) => a.criado_em.localeCompare(b.criado_em));
-    let ok = 0, falha = 0, driveIndisponivel = false;
+    let ok = 0, falha = 0;
     for (const it of itens) {
       try {
         if (it.tipo === 'insert') {
@@ -1034,12 +1044,12 @@ async function drainQueue(manual) {
         } else if (it.tipo === 'delete') {
           await sbDelete(it.tabela, it.filter);
         } else if (it.tipo === 'foto') {
-          if (!driveTokenValido()) { driveIndisponivel = true; continue; }
           const b = await idbGet('blobs', it.blobId);
           if (b && b.blob) {
-            const up = await uploadDrive(b.blob, it.nomeArquivo);
+            const path = `${it.entidade}/${it.idEntidade}/${it.nomeArquivo}`;
+            const up = await uploadFotoStorage(b.blob, path);
             await sbInsert('fotos', {
-              id_foto: it.idFoto, drive_file_id: up.id, web_link: up.webViewLink || null,
+              id_foto: it.idFoto, drive_file_id: up.url, web_link: up.url,
               entidade: it.entidade, id_entidade: it.idEntidade,
               criado_em: it.criado_em, criado_por: userEmail
             });
@@ -1050,7 +1060,6 @@ async function drainQueue(manual) {
         ok++;
       } catch (e) {
         if (e.message === 'SEM_SESSION') break;
-        if (e.message === 'SEM_TOKEN_DRIVE') { driveIndisponivel = true; continue; }
         it.status = 'erro'; it.erro = e.message;
         await idbPut('fila', it);
         falha++;
@@ -1058,7 +1067,6 @@ async function drainQueue(manual) {
     }
     if (ok) showToast(`${ok} registro(s) sincronizado(s).`, 'success');
     if (falha && manual) showToast(`${falha} com erro — veja a fila.`, 'error');
-    if (driveIndisponivel && manual) showToast('Token do Drive expirou. Desconecte e conecte de novo para enviar fotos.', 'error');
   } finally {
     syncing = false;
     atualizarBadgeFila();
@@ -1671,8 +1679,9 @@ async function carregarPontosDoTrecho() {
   pontosDoTrecho.sort((a, b) => (a.seq || 0) - (b.seq || 0));
 }
 
-function thumbDrive(id) { return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200'; }
-function fullDrive(id)  { return 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view'; }
+/* Aceita URL direta (Supabase Storage) ou ID legado do Google Drive */
+function thumbDrive(v) { return /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w200'; }
+function fullDrive(v)  { return /^https?:\/\//.test(v) ? v : 'https://drive.google.com/file/d/' + encodeURIComponent(v) + '/view'; }
 
 function renderPontosColetados() {
   const el = document.getElementById('pt-coletados');
@@ -2885,7 +2894,7 @@ function fecharDrawer() {
 }
 
 /* ---------- Lightbox navegável ---------- */
-function driveView(id) { return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1200'; }
+function driveView(v) { return /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w1200'; }
 
 function lbOpen(groupIdx, photoIdx) {
   if (groupIdx < 0 || !lbGroups[groupIdx]) return;
