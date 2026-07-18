@@ -312,6 +312,38 @@
     .cons-table td:first-child::before { content: ""; }
   }
 
+  /* ── PAINEL (dashboard desktop) ── */
+  .dash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 12px; }
+  .dash-tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .dash-tile-wide { grid-column: 1 / -1; }
+  .dt-num { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  .dt-lbl { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .dt-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .dash-bar { display: flex; height: 10px; background: #E9EEE7; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .dash-bar span { border-radius: 4px; }
+  .dash-sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-top: 14px; }
+  .dash-sec-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dash-sec-h h3 { font-size: 15px; }
+  .dash-leg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); }
+  .dash-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); }
+  #dash-map { height: 420px; border-radius: var(--radius); position: relative; z-index: 1; }
+  .dash-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 900px) { .dash-cols { grid-template-columns: 1fr; } #dash-map { height: 300px; } }
+  .dash-rua { margin-bottom: 10px; }
+  .dr-l { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+  .dr-nome { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dr-num { color: var(--text-secondary); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 460px; overflow-y: auto; padding-right: 2px; }
+  .dash-cell { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; background: var(--surface); }
+  .dash-cell[data-fotos] { cursor: pointer; }
+  .dash-cell:hover { border-color: var(--accent-mid); }
+  .dc-t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .dc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dc-s { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .dc-badge { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: inline-block; }
+  .dash-tip { position: fixed; z-index: 600; display: none; gap: 4px; padding: 5px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 24px rgba(31,74,43,0.25); pointer-events: none; }
+  .dash-tip.open { display: flex; }
+  .dash-tip img { width: 96px; height: 96px; object-fit: cover; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -618,6 +650,7 @@
   <div class="cons-tabs">
     <button class="cons-tab active" data-t="arbo" onclick="consTab('arbo')">Arborização</button>
     <button class="cons-tab" data-t="jard" onclick="consTab('jard')">Jardinagem</button>
+    <button class="cons-tab" data-t="dash" onclick="consTab('dash')">📊 Painel</button>
   </div>
 
   <div class="cons-filtros" id="cons-filtros"></div>
@@ -2647,16 +2680,19 @@ let lbGroupIdx = 0, lbPhotoIdx = 0;
 
 function abrirConsulta() {
   showPage('consulta');
-  renderFiltros();
-  consBuscar();
+  consTab(consTabAtual);
 }
 
 function consTab(t) {
   consTabAtual = t;
   document.querySelectorAll('.cons-tab').forEach(b => b.classList.toggle('active', b.dataset.t === t));
-  renderFiltros();
+  const dash = t === 'dash';
+  document.getElementById('cons-filtros').style.display = dash ? 'none' : '';
+  document.querySelector('.cons-actions').style.display = dash ? 'none' : '';
   document.getElementById('cons-resultado').innerHTML = '';
   document.getElementById('cons-count').textContent = '';
+  if (dash) return dashAbrir();
+  renderFiltros();
   consBuscar();
 }
 
@@ -2884,6 +2920,246 @@ function abrirDetalheJard(i) {
     <div class="det-sec-title">Canteiros</div>
     ${cantHtml || '<div class="empty">Nenhum canteiro.</div>'}`;
   abrirDrawer();
+}
+
+/* ================================================================
+   PAINEL (dashboard desktop) — KPIs, progresso, mapa e grid c/ fotos
+   Cores validadas p/ daltonismo sobre superfície branca.
+   ================================================================ */
+const DASH_COR = { feito: '#1E8659', planejado: '#B07222', jard: '#2C5D9E' };
+let dashItens = [];
+let dashFiltro = 'todos';
+let dashMapa = null;
+let leafletPromise = null;
+
+function carregarLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (leafletPromise) return leafletPromise;
+  leafletPromise = new Promise((res, rej) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+    s.onload = () => res();
+    s.onerror = () => { leafletPromise = null; rej(new Error('sem acesso ao CDN do mapa')); };
+    document.body.appendChild(s);
+  });
+  return leafletPromise;
+}
+
+async function dashAbrir() {
+  const box = document.getElementById('cons-resultado');
+  if (!sessionValida() || !navigator.onLine) {
+    box.innerHTML = '<div class="empty">Conecte-se à internet para montar o painel.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="empty">Montando painel…</div>';
+  try {
+    const [ruas, espacos] = await Promise.all([
+      sbSelect('arbo_ruas', 'select=id_rua,nome_rua,bairro,arbo_trechos(id_trecho,status,arbo_pontos(id_ponto,seq,numeracao,lat,lng,especie_plano,especie_sugerida,status))&order=criado_em.desc') .then(r => r || []),
+      sbSelect('jard_espacos', 'select=id_espaco,codigo,nome,tipo,bairro,lat,lng,jard_canteiros(id_canteiro,seq,area_m2,situacao,jard_especies(qtd_mudas))&order=criado_em.desc').then(r => r || [])
+    ]);
+
+    const pontos = [];
+    ruas.forEach(r => (r.arbo_trechos || []).forEach(t => (t.arbo_pontos || []).forEach(p => pontos.push({ ...p, rua: r }))));
+    const cants = [];
+    espacos.forEach(e => (e.jard_canteiros || []).forEach(c => cants.push(c)));
+
+    const [fPt, fEsp, fCant] = await Promise.all([
+      carregarFotos('arbo_ponto', pontos.map(p => p.id_ponto)),
+      carregarFotos('jard_espaco', espacos.map(e => e.id_espaco)),
+      carregarFotos('jard_canteiro', cants.map(c => c.id_canteiro))
+    ]);
+
+    // ── indicadores ──
+    const feitos = pontos.filter(p => p.status !== 'planejado').length;
+    const planejados = pontos.length - feitos;
+    const pct = pontos.length ? Math.round(feitos / pontos.length * 100) : 0;
+    const nTrechos = ruas.reduce((s, r) => s + (r.arbo_trechos || []).length, 0);
+    const areaTot = cants.reduce((s, c) => s + (+c.area_m2 || 0), 0);
+    const mudasTot = cants.reduce((s, c) => s + (c.jard_especies || []).reduce((a, x) => a + (+x.qtd_mudas || 0), 0), 0);
+    const nFotos = [fPt, fEsp, fCant].reduce((s, m) => s + Object.values(m).reduce((a, arr) => a + arr.length, 0), 0);
+
+    // ── itens do grid + mapa ──
+    dashItens = [];
+    pontos.forEach(p => dashItens.push({
+      tipo: 'arbo', feito: p.status !== 'planejado',
+      titulo: (p.rua.nome_rua || '') + ' · P' + (p.seq || '?'),
+      sub: [p.numeracao && 'nº ' + p.numeracao, p.especie_plano || p.especie_sugerida,
+            p.status === 'planejado' ? '⏳ a coletar' : '✓ coletado'].filter(Boolean).join(' · '),
+      lat: p.lat, lng: p.lng, fotos: fPt[p.id_ponto] || []
+    }));
+    espacos.forEach(e => dashItens.push({
+      tipo: 'jard', feito: true,
+      titulo: e.nome || e.codigo || 'Espaço',
+      sub: [TIPO_L2[e.tipo] || e.tipo, e.bairro, (e.jard_canteiros || []).length + ' canteiro(s)'].filter(Boolean).join(' · '),
+      lat: e.lat, lng: e.lng,
+      fotos: (fEsp[e.id_espaco] || []).concat((e.jard_canteiros || []).flatMap(c => fCant[c.id_canteiro] || []))
+    }));
+
+    // ── progresso por rua (as com mais pendências primeiro) ──
+    const porRua = ruas.map(r => {
+      const ps = (r.arbo_trechos || []).flatMap(t => t.arbo_pontos || []);
+      const f = ps.filter(p => p.status !== 'planejado').length;
+      return { nome: r.nome_rua, total: ps.length, feito: f };
+    }).filter(x => x.total)
+      .sort((a, b) => (b.total - b.feito) - (a.total - a.feito) || b.total - a.total)
+      .slice(0, 12);
+
+    const tile = (num, lbl, sub) => `
+      <div class="dash-tile"><div class="dt-lbl">${lbl}</div><div class="dt-num">${num}</div>${sub ? `<div class="dt-sub">${sub}</div>` : ''}</div>`;
+
+    const barras = porRua.map(r => {
+      const w = Math.round(r.feito / r.total * 100);
+      return `<div class="dash-rua">
+        <div class="dr-l"><span class="dr-nome">${escapeHtml(r.nome)}</span><span class="dr-num">${r.feito}/${r.total} · ${w}%</span></div>
+        <div class="dash-bar">${r.feito ? `<span style="width:${w}%;background:${DASH_COR.feito}"></span>` : ''}</div>
+      </div>`;
+    }).join('') || '<div class="empty">Nenhum ponto de arborização ainda.</div>';
+
+    box.innerHTML = `
+      <div style="display:flex; justify-content:flex-end; margin-top:10px">
+        <button class="btn btn-sm" style="width:auto" onclick="dashAbrir()">↻ Atualizar painel</button>
+      </div>
+      <div class="dash-kpis">
+        <div class="dash-tile dash-tile-wide">
+          <div class="dt-lbl">Progresso do plantio</div>
+          <div class="dt-num">${pct}%</div>
+          <div class="dash-bar">${feitos ? `<span style="width:${pct}%;background:${DASH_COR.feito}"></span>` : ''}</div>
+          <div class="dt-sub">✓ ${feitos} coletado(s) · ⏳ ${planejados} a coletar</div>
+        </div>
+        ${tile(pontos.length, 'Pontos de plantio', ruas.length + ' rua(s) · ' + nTrechos + ' trecho(s)')}
+        ${tile(espacos.length, 'Espaços de jardinagem', cants.length + ' canteiro(s)')}
+        ${tile(areaTot ? areaTot.toFixed(1).replace('.', ',') + ' m²' : '—', 'Área de canteiros', mudasTot ? mudasTot + ' muda(s) prevista(s)' : '')}
+        ${tile(nFotos, 'Fotos enviadas', '')}
+      </div>
+      <div class="dash-sec">
+        <div class="dash-sec-h">
+          <h3>Mapa da coleta</h3>
+          <div class="dash-leg">
+            <span><i style="background:${DASH_COR.feito}"></i> Ponto coletado</span>
+            <span><i style="background:${DASH_COR.planejado}"></i> Ponto planejado</span>
+            <span><i style="background:${DASH_COR.jard}"></i> Espaço de jardinagem</span>
+          </div>
+        </div>
+        <div id="dash-map"></div>
+      </div>
+      <div class="dash-cols">
+        <div class="dash-sec">
+          <div class="dash-sec-h"><h3>Progresso por rua</h3><span class="dash-leg">mais pendências primeiro</span></div>
+          <div>${barras}</div>
+        </div>
+        <div class="dash-sec">
+          <div class="dash-sec-h">
+            <h3>Todos os registros</h3>
+            <div class="chips" id="dash-chips" style="margin:0">
+              <button class="chip on-green" onclick="dashSetFiltro('todos', this)">Tudo</button>
+              <button class="chip" onclick="dashSetFiltro('arbo', this)">Arborização</button>
+              <button class="chip" onclick="dashSetFiltro('jard', this)">Jardinagem</button>
+            </div>
+          </div>
+          <div class="dash-grid" id="dash-grid"></div>
+        </div>
+      </div>`;
+    dashRenderGrid();
+    dashWireTip();
+    dashMapaInit();
+  } catch (e) {
+    box.innerHTML = '<div class="empty">Erro ao montar o painel: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function dashSetFiltro(f, btn) {
+  dashFiltro = f;
+  document.querySelectorAll('#dash-chips .chip').forEach(b => b.classList.toggle('on-green', b === btn));
+  dashRenderGrid();
+}
+
+function dashRenderGrid() {
+  const el = document.getElementById('dash-grid');
+  if (!el) return;
+  const itens = dashItens
+    .map((it, i) => ({ it, i }))
+    .filter(x => dashFiltro === 'todos' || x.it.tipo === dashFiltro);
+  el.innerHTML = itens.map(({ it, i }) => {
+    const cor = it.tipo === 'jard' ? DASH_COR.jard : (it.feito ? DASH_COR.feito : DASH_COR.planejado);
+    const nF = (it.fotos || []).length;
+    return `<div class="dash-cell" data-i="${i}" ${nF ? 'data-fotos="1"' : ''} ${nF ? `onclick="dashAbrirFotos(${i})"` : ''}>
+      <div class="dc-t"><span class="dc-dot" style="background:${cor}"></span>${escapeHtml(it.titulo)}</div>
+      <div class="dc-s">${escapeHtml(it.sub || '')}</div>
+      ${nF ? `<span class="dc-badge">📷 ${nF} foto(s) — passe o mouse</span>` : ''}
+    </div>`;
+  }).join('') || '<div class="empty">Nada aqui ainda.</div>';
+}
+
+function dashAbrirFotos(i) {
+  const it = dashItens[i];
+  if (!it || !(it.fotos || []).length) return;
+  lbGroups = [{ label: it.titulo, sub: it.sub || '', fotos: it.fotos }];
+  lbOpen(0, 0);
+}
+
+function dashTipEl() {
+  let el = document.getElementById('dash-tip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dash-tip'; el.className = 'dash-tip';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function dashWireTip() {
+  const grid = document.getElementById('dash-grid');
+  if (!grid) return;
+  const tip = dashTipEl();
+  grid.addEventListener('mousemove', e => {
+    const cell = e.target.closest('.dash-cell');
+    if (!cell || !cell.dataset.fotos) { tip.classList.remove('open'); return; }
+    const i = cell.dataset.i;
+    if (tip.dataset.i !== i) {
+      const fs = (dashItens[+i].fotos || []).slice(0, 3);
+      tip.innerHTML = fs.map(f => `<img src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.remove()">`).join('');
+      tip.dataset.i = i;
+    }
+    tip.classList.add('open');
+    const pad = 14, r = tip.getBoundingClientRect();
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + r.width  > innerWidth  - 8) x = e.clientX - r.width  - pad;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  grid.addEventListener('mouseleave', () => tip.classList.remove('open'));
+}
+
+async function dashMapaInit() {
+  const el = document.getElementById('dash-map');
+  if (!el) return;
+  const comGps = dashItens.filter(it => it.lat && it.lng);
+  if (!comGps.length) {
+    el.style.height = 'auto';
+    el.innerHTML = '<div class="empty">Nenhum registro com GPS ainda — os pontos coletados em campo aparecem aqui.</div>';
+    return;
+  }
+  try { await carregarLeaflet(); }
+  catch (e) { el.innerHTML = '<div class="empty">Mapa indisponível: ' + escapeHtml(e.message) + '</div>'; return; }
+  if (dashMapa) { try { dashMapa.remove(); } catch (_) {} dashMapa = null; }
+  dashMapa = L.map(el);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(dashMapa);
+  const bounds = [];
+  comGps.forEach(it => {
+    const cor = it.tipo === 'jard' ? DASH_COR.jard : (it.feito ? DASH_COR.feito : DASH_COR.planejado);
+    L.circleMarker([+it.lat, +it.lng], { radius: 7, color: '#ffffff', weight: 2, fillColor: cor, fillOpacity: 1 })
+      .addTo(dashMapa)
+      .bindPopup(`<b>${escapeHtml(it.titulo)}</b><br>${escapeHtml(it.sub || '')}<br>` +
+        `<a href="https://www.google.com/maps?q=${+it.lat},${+it.lng}" target="_blank" rel="noopener">abrir no Google Maps</a>`);
+    bounds.push([+it.lat, +it.lng]);
+  });
+  dashMapa.fitBounds(bounds, { padding: [24, 24], maxZoom: 17 });
 }
 
 /* ---------- Fotos: busca em lote ---------- */
