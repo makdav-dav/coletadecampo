@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- teste de push: editado via VSCode -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -140,11 +139,17 @@
     font-size: 11px; font-weight: 700; gap: 2px;
   }
   .foto-wrap { position: relative; }
+  .foto-wrap .foto-thumb { cursor: pointer; }
   .foto-x {
     position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
     border-radius: 50%; background: var(--danger); color: #fff; border: none;
     font-size: 12px; line-height: 1; cursor: pointer;
   }
+  /* visualizador simples de foto local (antes de enviar) */
+  .foto-prev { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 500; align-items: center; justify-content: center; padding: 20px; }
+  .foto-prev.open { display: flex; }
+  .foto-prev img { max-width: 100%; max-height: 100%; border-radius: 8px; object-fit: contain; }
+  .foto-prev .foto-prev-x { position: absolute; top: 14px; right: 16px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 24px; line-height: 1; cursor: pointer; }
 
   .list-item {
     background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -374,7 +379,8 @@
       <button class="btn btn-sm" onclick="document.getElementById('rua-form').style.display='none'">Cancelar</button>
     </div>
   </div>
-  <div id="arbo-lista" style="margin-top:14px"></div>
+  <input type="text" id="arbo-busca" placeholder="🔍 Buscar rua ou bairro pelo nome…" oninput="renderArboLista()" style="margin-top:14px">
+  <div id="arbo-lista" style="margin-top:10px"></div>
 </section>
 
 <!-- ============ ARBORIZAÇÃO: TRECHOS DE UMA RUA ============ -->
@@ -655,6 +661,12 @@
     <button id="lb-jump-prev" onclick="lbJump(-1)">‹ Ponto anterior</button>
     <button id="lb-jump-next" onclick="lbJump(1)">Próximo ponto ›</button>
   </div>
+</div>
+
+<!-- Visualizador de foto local (antes de enviar ao Drive) -->
+<div class="foto-prev" id="foto-prev" onclick="fecharPreviewLocal()">
+  <button class="foto-prev-x" onclick="fecharPreviewLocal()" aria-label="Fechar">×</button>
+  <img id="foto-prev-img" src="" alt="foto">
 </div>
 
 <nav>
@@ -1115,24 +1127,29 @@ function gpsAgora() {
 
 /* Preenche campos de um formulário a partir do endereço do GPS.
    mapa = { idDoCampo: fn(address) } — só preenche campo vazio. */
-async function usarGPSnosCampos(mapa) {
+async function usarGPSnosCampos(mapa, rotulo) {
   try {
     showToast('Buscando endereço pelo GPS…', 'info');
     const g = await gpsAgora();
     const a = await reverseGeo(g.lat, g.lng);
     if (!a) return showToast('Sem internet ou endereço não encontrado para essas coordenadas.', 'error');
-    let preencheu = 0;
+    let preencheu = 0, jaTinha = 0, semDado = 0;
     for (const [id, fn] of Object.entries(mapa)) {
       const campo = document.getElementById(id);
+      if (!campo) continue;
+      if (campo.value.trim()) { jaTinha++; continue; }   // campo já preenchido — não sobrescreve
       const v = fn(a);
-      if (campo && v && !campo.value.trim()) { campo.value = v; preencheu++; }
+      if (v) { campo.value = v; preencheu++; }
+      else   { semDado++; }                               // GPS não retornou esse dado
     }
-    showToast(preencheu ? 'Endereço preenchido pelo GPS.' : 'Campos já preenchidos — nada alterado.', preencheu ? 'success' : 'info');
+    if (preencheu)      showToast('Preenchido pelo GPS.', 'success');
+    else if (semDado)   showToast('O GPS não encontrou ' + (rotulo || 'esse dado') + ' para este local. Preencha manualmente.', 'info');
+    else                showToast('Campo já preenchido — nada alterado.', 'info');
   } catch (e) { showToast(e.message, 'error'); }
 }
-function gpsRua()    { return usarGPSnosCampos({ 'ru-nome': a => a.road, 'ru-bairro': a => a.suburb || a.neighbourhood || a.village }); }
-function gpsPonto()  { return usarGPSnosCampos({ 'pt-num': a => a.house_number }); }
-function gpsEspaco() { return usarGPSnosCampos({ 'es-end': a => [a.road, a.house_number].filter(Boolean).join(', '), 'es-bairro': a => a.suburb || a.neighbourhood || a.village }); }
+function gpsRua()    { return usarGPSnosCampos({ 'ru-nome': a => a.road, 'ru-bairro': a => a.suburb || a.neighbourhood || a.village }, 'a rua/bairro'); }
+function gpsPonto()  { return usarGPSnosCampos({ 'pt-num': a => a.house_number }, 'o número desta casa'); }
+function gpsEspaco() { return usarGPSnosCampos({ 'es-end': a => [a.road, a.house_number].filter(Boolean).join(', '), 'es-bairro': a => a.suburb || a.neighbourhood || a.village }, 'o endereço/bairro'); }
 
 function desenharCarimbo(ctx, w, h, linhas) {
   if (!linhas.length) return;
@@ -1159,6 +1176,36 @@ function desenharCarimbo(ctx, w, h, linhas) {
   ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 }
 
+/* Logo institucional no canto superior direito das fotos.
+   Coloque o arquivo "logo.png" na mesma pasta do index.html. */
+const logoCarimbo = new Image();
+let logoCarimboOk = false;
+logoCarimbo.onload  = () => { logoCarimboOk = logoCarimbo.naturalWidth > 0; };
+logoCarimbo.onerror = () => { logoCarimboOk = false; };
+logoCarimbo.src = 'logo.png';
+
+function desenharLogo(ctx, w, h) {
+  if (!logoCarimboOk) return;
+  const ratio = logoCarimbo.naturalHeight / logoCarimbo.naturalWidth;
+  const lw = Math.min(Math.round(w * 0.40), 460);   // largura ~40% da foto
+  const lh = Math.round(lw * ratio);
+  const m  = Math.round(w * 0.02);
+  const x  = w - lw - m, y = m;
+  const pad = Math.round(lw * 0.04);
+  const r   = Math.round(lw * 0.03);
+  // fundo branco arredondado para contraste
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(x - pad + r, y - pad);
+  ctx.arcTo(x + lw + pad, y - pad,      x + lw + pad, y + lh + pad, r);
+  ctx.arcTo(x + lw + pad, y + lh + pad, x - pad,      y + lh + pad, r);
+  ctx.arcTo(x - pad,      y + lh + pad, x - pad,      y - pad,      r);
+  ctx.arcTo(x - pad,      y - pad,      x + lw + pad, y - pad,      r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.drawImage(logoCarimbo, x, y, lw, lh);
+}
+
 function comprimirFoto(file, carimbo) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -1175,6 +1222,7 @@ function comprimirFoto(file, carimbo) {
       if (carimbo && carimbo.length) {
         try { desenharCarimbo(ctx, w, h, carimbo); } catch(e) { console.warn('carimbo:', e.message); }
       }
+      try { desenharLogo(ctx, w, h); } catch(e) { console.warn('logo:', e.message); }
       cv.toBlob(b => b ? resolve(b) : reject(new Error('Falha na compressão')), 'image/jpeg', 0.85);
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
@@ -1184,13 +1232,20 @@ function comprimirFoto(file, carimbo) {
 
 async function montarCarimbo() {
   const ts = new Date();
-  const dataHora = ts.toLocaleDateString('pt-BR') + ' ' + ts.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dataHora = ts.toLocaleDateString('pt-BR') + ' ' + ts.toLocaleTimeString('pt-BR');
   const linhas = [];
   if (gpsAtual) {
+    const a = await reverseGeo(gpsAtual.lat, gpsAtual.lng);
+    if (a) {
+      const l1 = [a.road, a.house_number].filter(Boolean).join(', ');
+      const l2 = [a.suburb || a.neighbourhood || a.village,
+                  a.city || a.town || a.municipality,
+                  a.state].filter(Boolean).join(' · ');
+      if (l1) linhas.push(l1);
+      if (l2) linhas.push(l2);
+    }
     linhas.push(gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6) +
       (gpsAtual.prec ? ' (±' + Math.round(gpsAtual.prec) + ' m)' : ''));
-    const end = await enderecoAproximado(gpsAtual.lat, gpsAtual.lng);
-    if (end) linhas.push(end);
   }
   linhas.push(dataHora + ' · SMMA Campo Largo');
   return linhas;
@@ -1211,12 +1266,22 @@ async function addFoto(input, pfx) {
     const im = document.createElement('img');
     im.className = 'foto-thumb';
     im.src = URL.createObjectURL(blob);
+    im.onclick = () => abrirPreviewLocal(im.src);
     const x = document.createElement('button');
     x.className = 'foto-x'; x.textContent = '×';
     x.onclick = () => { fotosForm[pfx] = fotosForm[pfx].filter(f => f.id !== id); wrap.remove(); };
     wrap.appendChild(im); wrap.appendChild(x);
     document.getElementById(pfx + '-fotos').appendChild(wrap);
   } catch (e) { showToast('Erro na foto: ' + e.message, 'error'); }
+}
+
+function abrirPreviewLocal(src) {
+  document.getElementById('foto-prev-img').src = src;
+  document.getElementById('foto-prev').classList.add('open');
+}
+function fecharPreviewLocal() {
+  document.getElementById('foto-prev').classList.remove('open');
+  document.getElementById('foto-prev-img').src = '';
 }
 
 async function enfileirarFotos(pfx, entidade, idEntidade, rotulo) {
@@ -1372,8 +1437,17 @@ async function salvarRua() {
 
 function renderArboLista() {
   const el = document.getElementById('arbo-lista');
-  const ruas = cacheRuas();
-  if (!ruas.length) { el.innerHTML = '<div class="empty">Nenhuma rua ainda. Toque em "+ Nova rua" para começar.</div>'; return; }
+  let ruas = cacheRuas();
+  const q = (document.getElementById('arbo-busca')?.value || '').trim().toLowerCase();
+  if (q) ruas = ruas.filter(r =>
+    (r.nome_rua || '').toLowerCase().includes(q) ||
+    (r.bairro   || '').toLowerCase().includes(q));
+  if (!ruas.length) {
+    el.innerHTML = q
+      ? `<div class="empty">Nenhuma rua encontrada para "${escapeHtml(q)}".</div>`
+      : '<div class="empty">Nenhuma rua ainda. Toque em "+ Nova rua" para começar.</div>';
+    return;
+  }
   el.innerHTML = ruas.map(r => `
     <div class="list-item" onclick="abrirRua('${r.id_rua}')">
       <div class="li-main">
@@ -1613,14 +1687,21 @@ function renderPontosColetados() {
           ${fs.slice(0, 3).map(f => `<a href="${fullDrive(f.drive_file_id)}" target="_blank" rel="noopener"><img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.style.opacity=0.25"></a>`).join('')}
           ${fs.length > 3 ? `<div class="foto-thumb" style="display:flex; align-items:center; justify-content:center; background:var(--accent-light); color:var(--accent-dark); font-weight:700">+${fs.length - 3}</div>` : ''}
         </div>` : '';
-    const editando = pontoEditando === p.id_ponto ? 'style="border-color:var(--accent); background:var(--accent-light)"' : '';
+    const planejado = p.status === 'planejado';
+    const borda = planejado ? 'var(--warning)' : 'var(--success)';
+    const estilo = pontoEditando === p.id_ponto
+      ? 'border-color:var(--accent); background:var(--accent-light)'
+      : 'border-left:4px solid ' + borda;
+    const statusBadge = planejado
+      ? '<span class="li-quadra" style="background:var(--warning-light); color:var(--warning)">⏳ a coletar</span>'
+      : '<span class="li-quadra" style="background:var(--accent-light); color:var(--success)">✓ feito</span>';
     return `
-    <div class="list-item" ${editando} onclick="editarPonto('${p.id_ponto}')">
+    <div class="list-item" style="${estilo}" onclick="editarPonto('${p.id_ponto}')">
       <div class="li-main">
         <div class="li-title">
           <span class="li-nome">Ponto ${p.seq || '?'}</span>
-          ${p._pendente ? '<span class="li-quadra" style="background:var(--warning-light); color:var(--warning)">pendente</span>' : ''}
-          ${p.status === 'planejado' ? '<span class="li-quadra" style="background:var(--warning-light); color:var(--warning)">planejado</span>' : ''}
+          ${statusBadge}
+          ${p._pendente ? '<span class="li-quadra" style="background:var(--warning-light); color:var(--warning)">não sincronizado</span>' : ''}
         </div>
         <div class="li-sub">${escapeHtml(info)}</div>
         ${strip}
@@ -1632,7 +1713,9 @@ function renderPontosColetados() {
       </div>
     </div>`;
   }).join('');
-  el.innerHTML = `<div class="page-sub" style="margin:14px 0 6px">Pontos já lançados (${pontosDoTrecho.length}). Toque para editar.</div>` + linhas;
+  const feitos = pontosDoTrecho.filter(p => p.status !== 'planejado').length;
+  const aColetar = pontosDoTrecho.length - feitos;
+  el.innerHTML = `<div class="page-sub" style="margin:14px 0 6px">${pontosDoTrecho.length} ponto(s) · <b style="color:var(--success)">${feitos} feito(s)</b>${aColetar ? ` · <b style="color:var(--warning)">${aColetar} a coletar</b>` : ''}. Toque para editar.</div>` + linhas;
 }
 
 /* Formulário — novo vs edição */
