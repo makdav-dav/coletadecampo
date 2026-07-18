@@ -997,14 +997,25 @@ async function pastaDrive() {
 }
 
 /* Upload da foto pro Supabase Storage (bucket público).
-   Usa a sessão do próprio coletor — funciona pra qualquer conta logada. */
+   Usa o MESMO token autenticado que grava os dados — garante o papel "authenticated". */
 async function uploadFotoStorage(blob, path) {
-  const { error } = await sb.storage.from(FOTOS_BUCKET).upload(path, blob, {
-    contentType: 'image/jpeg', upsert: true
+  if (!session) throw new Error('SEM_SESSION');
+  const alvo = `${SUPABASE_URL}/storage/v1/object/${FOTOS_BUCKET}/${encodeURI(path)}`;
+  const r = await fetch(alvo, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + session.access_token,
+      'Content-Type': 'image/jpeg',
+      'x-upsert': 'true'
+    },
+    body: blob
   });
-  if (error) throw new Error('Storage: ' + error.message);
-  const { data } = sb.storage.from(FOTOS_BUCKET).getPublicUrl(path);
-  return { path, url: data.publicUrl };
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error('Storage: ' + (t || r.status));
+  }
+  return { path, url: `${SUPABASE_URL}/storage/v1/object/public/${FOTOS_BUCKET}/${encodeURI(path)}` };
 }
 
 async function uploadDrive(blob, nome) {
