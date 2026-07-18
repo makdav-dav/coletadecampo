@@ -3020,7 +3020,8 @@ async function dashAbrir() {
     }).join('') || '<div class="empty">Nenhum ponto de arborização ainda.</div>';
 
     box.innerHTML = `
-      <div style="display:flex; justify-content:flex-end; margin-top:10px">
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px">
+        <a class="btn btn-sm" style="width:auto; text-decoration:none; display:inline-flex; align-items:center" href="painel.html" target="_blank" rel="noopener">🖥️ Abrir painel completo (PC)</a>
         <button class="btn btn-sm" style="width:auto" onclick="dashAbrir()">↻ Atualizar painel</button>
       </div>
       <div class="dash-kpis">

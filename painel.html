@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — SMMACL Campo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F2F5F0; --surface: #fff; --border: #DDE4DA;
+    --text-primary: #1B2620; --text-secondary: #55645B; --text-muted: #93A198;
+    --accent: #2F6B3F; --accent-light: #E3F0E5; --accent-mid: #5B9A6B; --accent-dark: #1F4A2B;
+    --danger: #B6453A; --success: #2E7D5B; --warning: #B07222; --warning-light: #F7EDDD;
+    --feito: #1E8659; --plan: #B07222; --jard: #2C5D9E;
+    --radius: 10px; --radius-lg: 14px;
+    --shadow: 0 1px 3px rgba(31,74,43,0.10), 0 1px 2px rgba(31,74,43,0.05);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text-primary); }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: var(--accent-dark); color: #fff; padding: 12px 22px; position: sticky; top: 0; z-index: 50;
+  }
+  .hdr-l { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; }
+  .hdr-t { font-size: 16px; font-weight: 800; }
+  .hdr-s { font-size: 12px; opacity: 0.75; }
+  .hdr-r { display: flex; align-items: center; gap: 10px; }
+  #u-email { font-size: 13px; opacity: 0.85; }
+  #u-papel { font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.16); border-radius: 20px; padding: 3px 10px; }
+  #btn-auth { border: 1.5px solid rgba(255,255,255,0.55); background: transparent; color: #fff; border-radius: 20px; padding: 7px 16px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  #btn-auth.connected { background: #fff; color: var(--accent-dark); }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); border-radius: var(--radius); padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* gate (estados: conectar / negado / carregando) */
+  .gate { max-width: 520px; margin: 12vh auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 34px; text-align: center; box-shadow: var(--shadow); }
+  .gate h2 { margin-bottom: 8px; }
+  .gate p { color: var(--text-secondary); font-size: 14px; margin-bottom: 18px; }
+
+  main { max-width: 1500px; margin: 0 auto; padding: 16px 22px 40px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .tile-wide { grid-column: span 2; }
+  .t-lbl { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .t-num { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+  .t-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .bar { display: flex; height: 10px; background: #E9EEE7; border-radius: 5px; overflow: hidden; margin-top: 8px; }
+  .bar span { border-radius: 4px; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 7fr) minmax(340px, 5fr); gap: 14px; margin-top: 14px; align-items: start; }
+  @media (max-width: 980px) { .cols { grid-template-columns: 1fr; } }
+  .sec { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+  .sec + .sec { margin-top: 14px; }
+  .sec-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sec-h h3 { font-size: 15px; }
+  .leg { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); }
+  .leg i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); }
+  #map { height: calc(100vh - 320px); min-height: 420px; border-radius: var(--radius); position: relative; z-index: 1; }
+
+  .rua-row { margin-bottom: 10px; }
+  .rr-l { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 4px; }
+  .rr-n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rr-v { color: var(--text-secondary); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border); background: var(--surface); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-secondary); }
+  .chip.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+  #busca { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; margin: 8px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+  .cell { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; cursor: pointer; background: var(--surface); }
+  .cell:hover { border-color: var(--accent-mid); box-shadow: var(--shadow); }
+  .c-t { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .c-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .c-s { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .c-b { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: inline-block; }
+  .empty { color: var(--text-muted); font-size: 13px; padding: 18px; text-align: center; }
+
+  .tip { position: fixed; z-index: 600; display: none; gap: 4px; padding: 5px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 24px rgba(31,74,43,0.25); pointer-events: none; }
+  .tip.open { display: flex; }
+  .tip img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; }
+
+  /* drawer de detalhe/edição */
+  .bk { display: none; position: fixed; inset: 0; background: rgba(20,30,24,0.4); z-index: 90; }
+  .bk.open { display: block; }
+  .dw { position: fixed; top: 0; right: -480px; width: 460px; max-width: 96vw; height: 100vh; background: var(--surface); z-index: 100; transition: right 0.25s; display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,0.15); }
+  .dw.open { right: 0; }
+  .dw-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .dw-t { font-size: 16px; font-weight: 800; }
+  .dw-s { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+  .dw-x { border: none; background: none; font-size: 26px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+  .dw-b { padding: 16px 18px; overflow-y: auto; flex: 1; }
+  .dw-b label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin: 12px 0 4px; }
+  .dw-b input, .dw-b select, .dw-b textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; font-size: 14px; font-family: inherit; }
+  .dw-f { padding: 14px 18px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .fotos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .fotos img { width: 86px; height: 86px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+  .ro { background: var(--accent-light); border-radius: var(--radius); padding: 10px 12px; font-size: 13px; color: var(--accent-dark); margin-top: 12px; }
+
+  /* visualizador de foto */
+  .viz { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 700; align-items: center; justify-content: center; padding: 24px; }
+  .viz.open { display: flex; }
+  .viz img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  .viz button { position: absolute; top: 16px; right: 18px; width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #fff; border: none; font-size: 24px; cursor: pointer; }
+
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent-dark); color: #fff; border-radius: 24px; padding: 11px 22px; font-size: 14px; font-weight: 600; z-index: 800; transition: transform 0.25s; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.error { background: var(--danger); }
+  #toast.success { background: var(--success); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-l">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-4.5 7-11a7 7 0 0 0-14 0c0 6.5 7 11 7 11z"/><path d="M12 8v6M9.5 10.5 12 8l2.5 2.5"/></svg>
+    </div>
+    <div>
+      <div class="hdr-t">Painel SMMACL Campo</div>
+      <div class="hdr-s">Meio Ambiente · Campo Largo — visão para computador</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <span id="u-papel" hidden></span>
+    <span id="u-email"></span>
+    <button id="btn-auth" onclick="handleAuth()">Conectar</button>
+  </div>
+</header>
+
+<div class="gate" id="gate">
+  <h2>Painel de acompanhamento</h2>
+  <p id="gate-msg">Conecte-se com sua conta Google autorizada para ver o andamento da coleta de campo.</p>
+  <button class="btn btn-primary" id="gate-btn" onclick="handleAuth()">Conectar com Google</button>
+</div>
+
+<main id="app" hidden>
+  <div class="kpis" id="kpis"></div>
+  <div class="cols">
+    <section class="sec">
+      <div class="sec-h">
+        <h3>Mapa da coleta</h3>
+        <div class="leg">
+          <span><i style="background:var(--feito)"></i> Ponto coletado</span>
+          <span><i style="background:var(--plan)"></i> Ponto planejado</span>
+          <span><i style="background:var(--jard)"></i> Espaço de jardinagem</span>
+          <button class="btn" style="padding:5px 12px" onclick="carregar()">↻ Atualizar</button>
+        </div>
+      </div>
+      <div id="map"></div>
+    </section>
+    <div>
+      <section class="sec">
+        <div class="sec-h"><h3>Progresso por rua</h3><span class="leg">mais pendências primeiro</span></div>
+        <div id="ruas"></div>
+      </section>
+      <section class="sec">
+        <div class="sec-h">
+          <h3>Registros</h3>
+          <div class="chips" id="chips">
+            <button class="chip on" onclick="setFiltro('todos', this)">Tudo</button>
+            <button class="chip" onclick="setFiltro('arbo', this)">Arborização</button>
+            <button class="chip" onclick="setFiltro('jard', this)">Jardinagem</button>
+            <button class="chip" onclick="setFiltro('pend', this)">⏳ A coletar</button>
+          </div>
+        </div>
+        <input type="text" id="busca" placeholder="🔍 Filtrar por rua, espécie, bairro…" oninput="renderGrid()">
+        <div class="grid" id="grid"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<div class="bk" id="bk" onclick="fecharDrawer()"></div>
+<aside class="dw" id="dw">
+  <div class="dw-h">
+    <div><div class="dw-t" id="dw-t">—</div><div class="dw-s" id="dw-s">—</div></div>
+    <button class="dw-x" onclick="fecharDrawer()">×</button>
+  </div>
+  <div class="dw-b" id="dw-b"></div>
+  <div class="dw-f" id="dw-f"></div>
+</aside>
+
+<div class="viz" id="viz" onclick="this.classList.remove('open')">
+  <button>×</button><img id="viz-img" src="" alt="foto">
+</div>
+<div class="tip" id="tip"></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================================================================
+   Painel SMMACL — leitura e edição dos pontos (desktop)
+   Mesmo backend do app de campo (Supabase + Storage)
+   ================================================================ */
+const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
+const COR = { feito: '#1E8659', plan: '#B07222', jard: '#2C5D9E' };
+const TIPO_L = { praca: 'Praça', rotatoria: 'Rotatória', canteiro_rua: 'Canteiro de rua', floreira: 'Floreira', jardim: 'Jardim', outro: 'Outro' };
+
+let sb = null, session = null, userEmail = null;
+let papel = null;        // 'editor' | 'leitor' | null (negado) — null+modoAberto=true = sem restrição configurada
+let modoAberto = false;  // true enquanto a tabela usuarios_autorizados não existir
+let itens = [];          // pontos + espaços (grid/mapa)
+let filtro = 'todos';
+let mapa = null, leafletP = null;
+let itemAberto = null;   // item em edição no drawer
+
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function showToast(msg, tipo) {
+  const t = $('toast');
+  t.textContent = msg; t.className = tipo || '';
+  t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function thumb(v) { return /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w200'; }
+function full(v)  { return /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w1200'; }
+
+/* ── auth ── */
+function handleAuth() {
+  if (!sb) return showToast('Biblioteca do banco não carregou. Verifique a rede.', 'error');
+  if (session) { sb.auth.signOut(); return; }
+  sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+}
+
+function pintarAuth() {
+  $('btn-auth').textContent = session ? 'Sair' : 'Conectar';
+  $('btn-auth').classList.toggle('connected', !!session);
+  $('u-email').textContent = userEmail || '';
+  const pp = $('u-papel');
+  if (session && (papel || modoAberto)) {
+    pp.hidden = false;
+    pp.textContent = modoAberto ? 'acesso livre' : (papel === 'editor' ? '✏️ editor' : '👁 leitor');
+  } else pp.hidden = true;
+}
+
+async function boot() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
+  });
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (s) { session = s; userEmail = s.user?.email || null; }
+  sb.auth.onAuthStateChange((ev, s2) => {
+    if (ev === 'SIGNED_IN' && s2) { session = s2; userEmail = s2.user?.email || null; entrar(); }
+    else if (ev === 'SIGNED_OUT') { session = null; userEmail = null; papel = null; sairUI(); }
+  });
+  if (session) entrar(); else sairUI();
+}
+
+function sairUI() {
+  pintarAuth();
+  $('app').hidden = true;
+  $('gate').style.display = '';
+  $('gate-msg').textContent = 'Conecte-se com sua conta Google autorizada para ver o andamento da coleta de campo.';
+  $('gate-btn').style.display = '';
+}
+
+async function entrar() {
+  pintarAuth();
+  $('gate-msg').textContent = 'Verificando acesso…';
+  $('gate-btn').style.display = 'none';
+  // papel do usuário na tabela de autorizados (se ela existir)
+  papel = null; modoAberto = false;
+  try {
+    const rows = await sbSelect('usuarios_autorizados', 'select=papel&email=eq.' + encodeURIComponent(userEmail));
+    if (rows && rows.length) papel = rows[0].papel;
+  } catch (e) { modoAberto = true; }  // tabela ainda não criada → sem restrição
+  pintarAuth();
+  if (!modoAberto && !papel) {
+    $('gate').style.display = '';
+    $('app').hidden = true;
+    $('gate-msg').innerHTML = 'A conta <b>' + escapeHtml(userEmail) + '</b> não está autorizada a ver este painel.<br>Peça acesso ao administrador.';
+    return;
+  }
+  $('gate').style.display = 'none';
+  $('app').hidden = false;
+  carregar();
+}
+
+/* ── REST ── */
+async function sbFetch(path, opts = {}) {
+  if (!session) throw new Error('SEM_SESSION');
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: opts.method || 'GET',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + session.access_token,
+      'Content-Type': 'application/json',
+      'Prefer': opts.prefer || 'return=minimal'
+    },
+    body: opts.body
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    let msg = t; try { const j = JSON.parse(t); msg = j.message || j.hint || t; } catch (e) {}
+    throw new Error(msg || ('HTTP ' + r.status));
+  }
+  const ct = r.headers.get('content-type') || '';
+  if (!ct.includes('json')) return null;
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : null;
+}
+function sbSelect(tab, q) { return sbFetch(tab + (q ? '?' + q : ''), { prefer: 'return=representation' }); }
+function sbUpdate(tab, filterQ, patch) { return sbFetch(tab + '?' + filterQ, { method: 'PATCH', body: JSON.stringify(patch) }); }
+
+async function carregarFotos(entidade, ids) {
+  if (!ids.length) return {};
+  const map = {};
+  for (let i = 0; i < ids.length; i += 60) {
+    const chunk = ids.slice(i, i + 60);
+    try {
+      const fs = await sbSelect('fotos', `select=drive_file_id,id_entidade&entidade=eq.${entidade}&id_entidade=in.(${chunk.join(',')})`) || [];
+      fs.forEach(f => (map[f.id_entidade] = map[f.id_entidade] || []).push(f));
+    } catch (e) { console.warn('fotos:', e.message); }
+  }
+  return map;
+}
+
+/* ── dados ── */
+async function carregar() {
+  $('kpis').innerHTML = '<div class="empty">Carregando…</div>';
+  try {
+    const [ruas, espacos] = await Promise.all([
+      sbSelect('arbo_ruas', 'select=id_rua,nome_rua,bairro,arbo_trechos(id_trecho,quadra,status,arbo_pontos(id_ponto,seq,numeracao,lat,lng,especie_plano,especie_sugerida,obs,status))&order=criado_em.desc').then(r => r || []),
+      sbSelect('jard_espacos', 'select=id_espaco,codigo,nome,tipo,endereco,bairro,lat,lng,jard_canteiros(id_canteiro,seq,area_m2,situacao,jard_especies(qtd_mudas))&order=criado_em.desc').then(r => r || [])
+    ]);
+
+    const pontos = [];
+    ruas.forEach(r => (r.arbo_trechos || []).forEach(t => (t.arbo_pontos || []).forEach(p => pontos.push({ ...p, rua: r, trecho: t }))));
+    const cants = [];
+    espacos.forEach(e => (e.jard_canteiros || []).forEach(c => cants.push(c)));
+
+    const [fPt, fEsp, fCant] = await Promise.all([
+      carregarFotos('arbo_ponto', pontos.map(p => p.id_ponto)),
+      carregarFotos('jard_espaco', espacos.map(e => e.id_espaco)),
+      carregarFotos('jard_canteiro', cants.map(c => c.id_canteiro))
+    ]);
+
+    itens = [];
+    pontos.forEach(p => itens.push({
+      tipo: 'arbo', ref: p, feito: p.status !== 'planejado',
+      titulo: (p.rua.nome_rua || '') + ' · P' + (p.seq || '?'),
+      sub: [p.numeracao && 'nº ' + p.numeracao, p.especie_plano || p.especie_sugerida,
+            p.status === 'planejado' ? '⏳ a coletar' : '✓ coletado'].filter(Boolean).join(' · '),
+      busca: [p.rua.nome_rua, p.rua.bairro, p.numeracao, p.especie_plano, p.especie_sugerida].filter(Boolean).join(' ').toLowerCase(),
+      lat: p.lat, lng: p.lng, fotos: fPt[p.id_ponto] || []
+    }));
+    espacos.forEach(e => itens.push({
+      tipo: 'jard', ref: e, feito: true,
+      titulo: e.nome || e.codigo || 'Espaço',
+      sub: [TIPO_L[e.tipo] || e.tipo, e.bairro, (e.jard_canteiros || []).length + ' canteiro(s)'].filter(Boolean).join(' · '),
+      busca: [e.nome, e.codigo, e.bairro, e.endereco].filter(Boolean).join(' ').toLowerCase(),
+      lat: e.lat, lng: e.lng,
+      fotos: (fEsp[e.id_espaco] || []).concat((e.jard_canteiros || []).flatMap(c => fCant[c.id_canteiro] || []))
+    }));
+
+    // KPIs
+    const feitos = pontos.filter(p => p.status !== 'planejado').length;
+    const planejados = pontos.length - feitos;
+    const pct = pontos.length ? Math.round(feitos / pontos.length * 100) : 0;
+    const nTrechos = ruas.reduce((s, r) => s + (r.arbo_trechos || []).length, 0);
+    const areaTot = cants.reduce((s, c) => s + (+c.area_m2 || 0), 0);
+    const mudasTot = cants.reduce((s, c) => s + (c.jard_especies || []).reduce((a, x) => a + (+x.qtd_mudas || 0), 0), 0);
+    const nFotos = itens.reduce((s, it) => s + it.fotos.length, 0);
+    const tile = (num, lbl, sub) => `<div class="tile"><div class="t-lbl">${lbl}</div><div class="t-num">${num}</div>${sub ? `<div class="t-sub">${sub}</div>` : ''}</div>`;
+    $('kpis').innerHTML = `
+      <div class="tile tile-wide">
+        <div class="t-lbl">Progresso do plantio</div>
+        <div class="t-num">${pct}%</div>
+        <div class="bar">${feitos ? `<span style="width:${pct}%;background:${COR.feito}"></span>` : ''}</div>
+        <div class="t-sub">✓ ${feitos} coletado(s) · ⏳ ${planejados} a coletar</div>
+      </div>
+      ${tile(pontos.length, 'Pontos de plantio', ruas.length + ' rua(s) · ' + nTrechos + ' trecho(s)')}
+      ${tile(espacos.length, 'Jardinagem', cants.length + ' canteiro(s)')}
+      ${tile(areaTot ? areaTot.toFixed(1).replace('.', ',') + ' m²' : '—', 'Área de canteiros', mudasTot ? mudasTot + ' muda(s)' : '')}
+      ${tile(nFotos, 'Fotos', '')}`;
+
+    // progresso por rua
+    const porRua = ruas.map(r => {
+      const ps = (r.arbo_trechos || []).flatMap(t => t.arbo_pontos || []);
+      const f = ps.filter(p => p.status !== 'planejado').length;
+      return { nome: r.nome_rua, total: ps.length, feito: f };
+    }).filter(x => x.total)
+      .sort((a, b) => (b.total - b.feito) - (a.total - a.feito) || b.total - a.total)
+      .slice(0, 15);
+    $('ruas').innerHTML = porRua.map(r => {
+      const w = Math.round(r.feito / r.total * 100);
+      return `<div class="rua-row">
+        <div class="rr-l"><span class="rr-n">${escapeHtml(r.nome)}</span><span class="rr-v">${r.feito}/${r.total} · ${w}%</span></div>
+        <div class="bar">${r.feito ? `<span style="width:${w}%;background:${COR.feito}"></span>` : ''}</div>
+      </div>`;
+    }).join('') || '<div class="empty">Nenhum ponto ainda.</div>';
+
+    renderGrid();
+    montarMapa();
+  } catch (e) {
+    $('kpis').innerHTML = '<div class="empty">Erro ao carregar: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+/* ── grid ── */
+function setFiltro(f, btn) {
+  filtro = f;
+  document.querySelectorAll('#chips .chip').forEach(b => b.classList.toggle('on', b === btn));
+  renderGrid();
+}
+function renderGrid() {
+  const q = ($('busca').value || '').trim().toLowerCase();
+  const lista = itens.map((it, i) => ({ it, i })).filter(({ it }) => {
+    if (filtro === 'arbo' && it.tipo !== 'arbo') return false;
+    if (filtro === 'jard' && it.tipo !== 'jard') return false;
+    if (filtro === 'pend' && (it.tipo !== 'arbo' || it.feito)) return false;
+    if (q && !it.busca.includes(q) && !it.titulo.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  $('grid').innerHTML = lista.map(({ it, i }) => {
+    const cor = it.tipo === 'jard' ? COR.jard : (it.feito ? COR.feito : COR.plan);
+    return `<div class="cell" data-i="${i}" ${it.fotos.length ? 'data-f="1"' : ''} onclick="abrirItem(${i})">
+      <div class="c-t"><span class="c-dot" style="background:${cor}"></span>${escapeHtml(it.titulo)}</div>
+      <div class="c-s">${escapeHtml(it.sub || '')}</div>
+      ${it.fotos.length ? `<span class="c-b">📷 ${it.fotos.length} foto(s)</span>` : ''}
+    </div>`;
+  }).join('') || '<div class="empty">Nada encontrado.</div>';
+}
+
+/* tooltip de fotos no hover */
+(function () {
+  const tip = $('tip');
+  document.addEventListener('mousemove', e => {
+    const cell = e.target.closest && e.target.closest('.cell[data-f]');
+    if (!cell) { tip.classList.remove('open'); return; }
+    const i = cell.dataset.i;
+    if (tip.dataset.i !== i) {
+      tip.innerHTML = itens[+i].fotos.slice(0, 3).map(f => `<img src="${thumb(f.drive_file_id)}" onerror="this.remove()">`).join('');
+      tip.dataset.i = i;
+    }
+    tip.classList.add('open');
+    const pad = 14, r = tip.getBoundingClientRect();
+    let x = e.clientX + pad, y = e.clientY + pad;
+    if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+})();
+
+/* ── mapa ── */
+function carregarLeaflet() {
+  if (window.L) return Promise.resolve();
+  if (leafletP) return leafletP;
+  leafletP = new Promise((res, rej) => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(css);
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';
+    s.onload = () => res();
+    s.onerror = () => { leafletP = null; rej(new Error('sem acesso ao CDN do mapa')); };
+    document.body.appendChild(s);
+  });
+  return leafletP;
+}
+async function montarMapa() {
+  const el = $('map');
+  const comGps = itens.map((it, i) => ({ it, i })).filter(({ it }) => it.lat && it.lng);
+  if (!comGps.length) { el.innerHTML = '<div class="empty">Nenhum registro com GPS ainda.</div>'; return; }
+  try { await carregarLeaflet(); }
+  catch (e) { el.innerHTML = '<div class="empty">Mapa indisponível: ' + escapeHtml(e.message) + '</div>'; return; }
+  if (mapa) { try { mapa.remove(); } catch (_) {} mapa = null; }
+  mapa = L.map(el);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+  const bounds = [];
+  comGps.forEach(({ it, i }) => {
+    const cor = it.tipo === 'jard' ? COR.jard : (it.feito ? COR.feito : COR.plan);
+    L.circleMarker([+it.lat, +it.lng], { radius: 7, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1 })
+      .addTo(mapa)
+      .on('click', () => abrirItem(i));
+    bounds.push([+it.lat, +it.lng]);
+  });
+  mapa.fitBounds(bounds, { padding: [26, 26], maxZoom: 17 });
+}
+
+/* ── drawer: detalhe + edição ── */
+function podeEditar() { return modoAberto || papel === 'editor'; }
+
+function abrirItem(i) {
+  const it = itens[i];
+  if (!it) return;
+  itemAberto = it;
+  $('dw-t').textContent = it.titulo;
+  $('dw-s').textContent = it.sub || '';
+  const fotosHtml = it.fotos.length
+    ? `<label>Fotos (${it.fotos.length})</label><div class="fotos">${it.fotos.map(f =>
+        `<img src="${thumb(f.drive_file_id)}" onclick="$('viz-img').src='${full(f.drive_file_id)}';$('viz').classList.add('open')" onerror="this.remove()">`).join('')}</div>`
+    : '<div class="ro">Sem fotos deste local ainda.</div>';
+
+  if (it.tipo === 'arbo') {
+    const p = it.ref;
+    $('dw-b').innerHTML = `
+      ${fotosHtml}
+      <label>Situação</label>
+      <select id="e-status" ${podeEditar() ? '' : 'disabled'}>
+        <option value="planejado" ${p.status === 'planejado' ? 'selected' : ''}>⏳ Planejado (a coletar)</option>
+        <option value="coletado" ${p.status !== 'planejado' ? 'selected' : ''}>✓ Coletado em campo</option>
+      </select>
+      <label>Numeração</label>
+      <input id="e-num" value="${escapeHtml(p.numeracao || '')}" ${podeEditar() ? '' : 'disabled'}>
+      <label>Espécie do plano</label>
+      <input id="e-plano" value="${escapeHtml(p.especie_plano || '')}" ${podeEditar() ? '' : 'disabled'}>
+      <label>Sugestão da equipe</label>
+      <input id="e-sug" value="${escapeHtml(p.especie_sugerida || '')}" ${podeEditar() ? '' : 'disabled'}>
+      <label>Observações</label>
+      <textarea id="e-obs" rows="3" ${podeEditar() ? '' : 'disabled'}>${escapeHtml(p.obs || '')}</textarea>
+      ${p.lat && p.lng ? `<div class="ro">📍 <a href="https://www.google.com/maps?q=${+p.lat},${+p.lng}" target="_blank" rel="noopener">${(+p.lat).toFixed(6)}, ${(+p.lng).toFixed(6)} — abrir no Google Maps</a></div>` : ''}
+      ${podeEditar() ? '' : '<div class="ro">👁 Você tem acesso de leitura — edição desativada.</div>'}`;
+    $('dw-f').innerHTML = podeEditar()
+      ? `<button class="btn btn-primary" style="flex:1" onclick="salvarPonto()">Salvar alterações</button>
+         <button class="btn" onclick="fecharDrawer()">Fechar</button>`
+      : `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`;
+  } else {
+    const e = it.ref;
+    $('dw-b').innerHTML = `
+      ${fotosHtml}
+      <div class="ro" style="margin-top:14px">
+        <b>${escapeHtml(TIPO_L[e.tipo] || e.tipo || 'Espaço')}</b>${e.codigo ? ' · ' + escapeHtml(e.codigo) : ''}<br>
+        ${escapeHtml(e.endereco || '')} ${e.bairro ? '· ' + escapeHtml(e.bairro) : ''}<br>
+        ${(e.jard_canteiros || []).length} canteiro(s)
+        ${e.lat && e.lng ? `<br>📍 <a href="https://www.google.com/maps?q=${+e.lat},${+e.lng}" target="_blank" rel="noopener">abrir no Google Maps</a>` : ''}
+      </div>
+      <div class="ro">A edição de espaços de jardinagem é feita pelo app de campo.</div>`;
+    $('dw-f').innerHTML = `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`;
+  }
+  $('bk').classList.add('open');
+  $('dw').classList.add('open');
+}
+function fecharDrawer() {
+  itemAberto = null;
+  $('bk').classList.remove('open');
+  $('dw').classList.remove('open');
+}
+
+async function salvarPonto() {
+  if (!itemAberto || itemAberto.tipo !== 'arbo') return;
+  const p = itemAberto.ref;
+  const patch = {
+    status: $('e-status').value,
+    numeracao: $('e-num').value.trim() || null,
+    especie_plano: $('e-plano').value.trim() || null,
+    especie_sugerida: $('e-sug').value.trim() || null,
+    obs: $('e-obs').value.trim() || null
+  };
+  try {
+    await sbUpdate('arbo_pontos', 'id_ponto=eq.' + encodeURIComponent(p.id_ponto), patch);
+    Object.assign(p, patch);
+    itemAberto.feito = patch.status !== 'planejado';
+    itemAberto.sub = [patch.numeracao && 'nº ' + patch.numeracao, patch.especie_plano || patch.especie_sugerida,
+      patch.status === 'planejado' ? '⏳ a coletar' : '✓ coletado'].filter(Boolean).join(' · ');
+    fecharDrawer();
+    showToast('Ponto atualizado.', 'success');
+    carregar();
+  } catch (e) {
+    showToast('Não foi possível salvar: ' + e.message, 'error');
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
