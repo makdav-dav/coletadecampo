@@ -21,6 +21,8 @@
     </div>
   </div>
   <div class="hdr-r">
+    <button id="btn-usuarios" onclick="abrirUsuarios()" hidden
+      style="border:1.5px solid rgba(255,255,255,0.55); background:transparent; color:#fff; border-radius:20px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer">👥 Usuários</button>
     <span id="u-papel" hidden></span>
     <span id="u-email"></span>
     <button id="btn-auth" onclick="handleAuth()">Conectar</button>
@@ -131,10 +133,12 @@ function pintarAuth() {
   $('btn-auth').classList.toggle('connected', !!session);
   $('u-email').textContent = userEmail || '';
   const pp = $('u-papel');
+  const ROTULO_PAPEL = { admin: '👑 admin', editor: '✏️ editor', coletor: '📍 coletor', leitor: '👁 leitor' };
   if (session && (papel || modoAberto)) {
     pp.hidden = false;
-    pp.textContent = modoAberto ? 'acesso livre' : (papel === 'editor' ? '✏️ editor' : '👁 leitor');
+    pp.textContent = modoAberto ? 'acesso livre' : (ROTULO_PAPEL[papel] || papel);
   } else pp.hidden = true;
+  $('btn-usuarios').hidden = !(session && papel === 'admin');
 }
 
 async function boot() {
@@ -383,7 +387,7 @@ async function montarMapa() {
 }
 
 /* ── drawer: detalhe + edição ── */
-function podeEditar() { return modoAberto || papel === 'editor'; }
+function podeEditar() { return modoAberto || papel === 'admin' || papel === 'editor'; }
 
 function abrirItem(i) {
   const it = itens[i];
@@ -462,6 +466,99 @@ async function salvarPonto() {
     carregar();
   } catch (e) {
     showToast('Não foi possível salvar: ' + e.message, 'error');
+  }
+}
+
+/* ── ADMIN: gerenciamento de usuários (só papel admin) ───────── */
+const PAPEIS = [
+  ['admin',   '👑 Admin — tudo + gerencia usuários'],
+  ['editor',  '✏️ Editor — edita e exclui qualquer registro'],
+  ['coletor', '📍 Coletor — adiciona; edita só o que criou'],
+  ['leitor',  '👁 Leitor — só visualiza']
+];
+
+function sbInsert(tab, dados) {
+  return sbFetch(tab, { method: 'POST', body: JSON.stringify(dados) });
+}
+function sbDelete(tab, filterQ) {
+  return sbFetch(tab + '?' + filterQ, { method: 'DELETE' });
+}
+
+async function abrirUsuarios() {
+  $('dw-t').textContent = 'Usuários autorizados';
+  $('dw-s').textContent = 'Quem pode entrar no app e no painel, e com qual papel';
+  $('dw-b').innerHTML = '<div class="empty">Carregando…</div>';
+  $('dw-f').innerHTML = '<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>';
+  $('bk').classList.add('open');
+  $('dw').classList.add('open');
+  await renderUsuarios();
+}
+
+async function renderUsuarios() {
+  let usuarios = [];
+  try {
+    usuarios = await sbSelect('usuarios_autorizados', 'select=email,papel&order=papel.asc,email.asc') || [];
+  } catch (e) {
+    $('dw-b').innerHTML = '<div class="empty">Erro ao listar: ' + escapeHtml(e.message) + '</div>';
+    return;
+  }
+  const opcoes = sel => PAPEIS.map(([v, l]) =>
+    `<option value="${v}" ${v === sel ? 'selected' : ''}>${l.split(' — ')[0]}</option>`).join('');
+  const linhas = usuarios.map(u => `
+    <div style="display:flex; align-items:center; gap:8px; padding:9px 0; border-bottom:1px solid var(--border)">
+      <div style="flex:1; min-width:0; font-size:13px; overflow:hidden; text-overflow:ellipsis">${escapeHtml(u.email)}${u.email === userEmail ? ' <b>(você)</b>' : ''}</div>
+      <select style="width:130px; padding:6px 8px; font-size:13px" onchange="mudarPapel('${escapeHtml(u.email)}', this.value, this)" ${u.email === userEmail ? 'disabled title="Não dá para mudar o próprio papel"' : ''}>
+        ${opcoes(u.papel)}
+      </select>
+      ${u.email === userEmail ? '<span style="width:30px"></span>' :
+        `<button class="btn" style="padding:6px 10px; color:var(--danger); border-color:var(--danger)" onclick="removerUsuario('${escapeHtml(u.email)}')" title="Remover acesso">×</button>`}
+    </div>`).join('');
+  $('dw-b').innerHTML = `
+    <label>Adicionar usuário</label>
+    <div style="display:flex; gap:8px">
+      <input id="nu-email" type="email" placeholder="email@gmail.com" style="flex:1">
+      <select id="nu-papel" style="width:130px">${opcoes('coletor')}</select>
+    </div>
+    <button class="btn btn-primary" style="width:100%; margin-top:8px" onclick="addUsuario()">+ Adicionar</button>
+    <div class="ro" style="margin-top:14px; font-size:12px">
+      ${PAPEIS.map(([, l]) => l).join('<br>')}
+    </div>
+    <label style="margin-top:16px">Usuários (${usuarios.length})</label>
+    ${linhas || '<div class="empty">Ninguém ainda.</div>'}`;
+}
+
+async function addUsuario() {
+  const email = $('nu-email').value.trim().toLowerCase();
+  const p = $('nu-papel').value;
+  if (!email || !email.includes('@')) return showToast('Informe um e-mail válido.', 'error');
+  try {
+    await sbInsert('usuarios_autorizados', { email, papel: p });
+    showToast(email + ' adicionado como ' + p + '.', 'success');
+    renderUsuarios();
+  } catch (e) {
+    if (/duplicate key/i.test(e.message)) showToast('Esse e-mail já está na lista.', 'error');
+    else showToast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function mudarPapel(email, novo, sel) {
+  try {
+    await sbUpdate('usuarios_autorizados', 'email=eq.' + encodeURIComponent(email), { papel: novo });
+    showToast(email + ' agora é ' + novo + '.', 'success');
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'error');
+    renderUsuarios();
+  }
+}
+
+async function removerUsuario(email) {
+  if (!confirm('Remover o acesso de ' + email + '?\n\nEle não conseguirá mais ver nem lançar dados.')) return;
+  try {
+    await sbDelete('usuarios_autorizados', 'email=eq.' + encodeURIComponent(email));
+    showToast('Acesso de ' + email + ' removido.', 'success');
+    renderUsuarios();
+  } catch (e) {
+    showToast('Erro: ' + e.message, 'error');
   }
 }
 
