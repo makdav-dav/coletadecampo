@@ -462,23 +462,16 @@ logoCarimbo.src = 'logo.png';
 function desenharLogo(ctx, w, h) {
   if (!logoCarimboOk) return;
   const ratio = logoCarimbo.naturalHeight / logoCarimbo.naturalWidth;
-  const lw = Math.min(Math.round(w * 0.40), 460);   // largura ~40% da foto
+  const lw = Math.min(Math.round(w * 0.52), 600);   // largura ~52% da foto (40% + 30%)
   const lh = Math.round(lw * ratio);
   const m  = Math.round(w * 0.02);
   const x  = w - lw - m, y = m;
-  const pad = Math.round(lw * 0.04);
-  const r   = Math.round(lw * 0.03);
-  // fundo branco arredondado para contraste
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.beginPath();
-  ctx.moveTo(x - pad + r, y - pad);
-  ctx.arcTo(x + lw + pad, y - pad,      x + lw + pad, y + lh + pad, r);
-  ctx.arcTo(x + lw + pad, y + lh + pad, x - pad,      y + lh + pad, r);
-  ctx.arcTo(x - pad,      y + lh + pad, x - pad,      y - pad,      r);
-  ctx.arcTo(x - pad,      y - pad,      x + lw + pad, y - pad,      r);
-  ctx.closePath();
-  ctx.fill();
+  // só a logo, com leve sombra p/ manter legível sobre qualquer foto
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 1;
   ctx.drawImage(logoCarimbo, x, y, lw, lh);
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.shadowColor = 'transparent';
 }
 
 function comprimirFoto(file, carimbo) {
