@@ -1,0 +1,42 @@
+/* ================================================================
+   SMMACL Campo — tokens de design (compartilhados por todas as páginas)
+   Esquema de cores baseado no tema oficial do site da Prefeitura de
+   Campo Largo (www.campolargo.pr.gov.br):
+     base do tema  #1f3b72 · escala #7e9edb → #5680d0 → #3463c0
+     → #294e98 → #1e3a70 → #132548 · verde do portal #007b34
+   ================================================================ */
+:root {
+  /* superfícies */
+  --bg: #F1F4F9;
+  --surface: #ffffff;
+  --border: #D9E0EC;
+
+  /* texto */
+  --text-primary: #1A2233;
+  --text-secondary: #53627C;
+  --text-muted: #94A0B6;
+
+  /* azul institucional (tema da prefeitura) */
+  --accent: #294E98;        /* ação principal (tema-4) */
+  --accent-light: #E7EDF9;  /* tinta clara do azul */
+  --accent-mid: #5680D0;    /* tema-2 */
+  --accent-dark: #1F3B72;   /* base do tema — cabeçalhos */
+
+  /* estados */
+  --danger: #C0392F;
+  --danger-light: #F9E7E5;
+  --success: #007B34;       /* verde do portal */
+  --warning: #B07222;
+  --warning-light: #F7EDDD;
+
+  /* série do painel/mapa (validada p/ daltonismo sobre branco) */
+  --feito: #1E8659;
+  --plan: #B07222;
+  --jard: #2C5D9E;
+  --trilha: #E7ECF4;        /* trilha das barras de progresso */
+
+  /* forma */
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 3px rgba(31,59,114,0.10), 0 1px 2px rgba(31,59,114,0.05);
+}
