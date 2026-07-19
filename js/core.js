@@ -466,12 +466,7 @@ function desenharLogo(ctx, w, h) {
   const lh = Math.round(lw * ratio);
   const m  = Math.round(w * 0.02);
   const x  = w - lw - m, y = m;
-  // só a logo, com leve sombra p/ manter legível sobre qualquer foto
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 1;
   ctx.drawImage(logoCarimbo, x, y, lw, lh);
-  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.shadowColor = 'transparent';
 }
 
 function comprimirFoto(file, carimbo) {
