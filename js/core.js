@@ -507,8 +507,10 @@ async function montarCarimbo() {
       if (l1) linhas.push(l1);
       if (l2) linhas.push(l2);
     }
+    // com o pino ajustado à mão, a precisão do GPS não faz mais sentido — some do carimbo
+    const mostraPrec = gpsAtual.prec && !gpsAtual.ajustado;
     linhas.push(gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6) +
-      (gpsAtual.prec ? ' (±' + Math.round(gpsAtual.prec) + ' m)' : ''));
+      (mostraPrec ? ' (±' + Math.round(gpsAtual.prec) + ' m)' : ''));
   }
   linhas.push(dataHora + ' · SMMA Campo Largo');
   return linhas;
@@ -590,7 +592,7 @@ async function confirmarLocalGPS(pfx) {
   pintarGPS(pfx);
 }
 
-function capturarGPS(pfx, autoMapa = true) {
+function capturarGPS(pfx) {
   const st = document.getElementById(pfx === 'es' ? 'es-gps-status' : 'gps-status');
   const co = document.getElementById(pfx === 'es' ? 'es-gps-coord' : 'gps-coord');
   if (!navigator.geolocation) { if (st) st.textContent = 'GPS indisponível neste aparelho'; return; }
@@ -598,7 +600,7 @@ function capturarGPS(pfx, autoMapa = true) {
   navigator.geolocation.getCurrentPosition(pos => {
     gpsAtual = { lat: pos.coords.latitude, lng: pos.coords.longitude, prec: pos.coords.accuracy };
     pintarGPS(pfx);
-    if (autoMapa) confirmarLocalGPS(pfx);   // mapa aparece já de cara, antes da foto
+    // o mapa de correção abre só quando o coletor tocar no botão "🗺️ Mapa"
   }, err => {
     gpsAtual = null;
     if (st) st.textContent = 'GPS falhou: ' + (err.message || 'sem sinal');
