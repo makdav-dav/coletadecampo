@@ -7,6 +7,13 @@
 <title>SMMACL — Levantamento de Campo</title>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/app.css">
+<!-- PWA: app instalável na tela inicial -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Coleta Campo">
 </head>
 <body>
 
@@ -129,7 +136,8 @@
         <div id="gps-status">Capturando GPS…</div>
         <div class="gps-coord" id="gps-coord"></div>
       </div>
-      <button class="btn btn-sm" onclick="capturarGPS()">Atualizar</button>
+      <button class="btn btn-sm" style="width:auto" onclick="confirmarLocalGPS()">🗺️ Mapa</button>
+      <button class="btn btn-sm" style="width:auto" onclick="capturarGPS()">Atualizar</button>
     </div>
 
     <label>Numeração específica do ponto</label>
@@ -205,7 +213,8 @@
         <div id="es-gps-status">GPS não capturado</div>
         <div class="gps-coord" id="es-gps-coord"></div>
       </div>
-      <button class="btn btn-sm" onclick="capturarGPS('es')">Capturar</button>
+      <button class="btn btn-sm" style="width:auto" onclick="confirmarLocalGPS('es')">🗺️ Mapa</button>
+      <button class="btn btn-sm" style="width:auto" onclick="capturarGPS('es')">Capturar</button>
     </div>
     <label>Fotos do espaço</label>
     <div class="foto-strip" id="es-fotos">
@@ -400,6 +409,8 @@
 <script src="js/importacao.js"></script>
 <script src="js/consulta.js"></script>
 <script src="js/painel-dash.js"></script>
+<script src="js/mapa-ponto.js"></script>
 <script src="js/fila-boot.js"></script>
+<script src="js/pwa.js"></script>
 </body>
 </html>

@@ -563,19 +563,45 @@ async function enfileirarFotos(pfx, entidade, idEntidade, rotulo) {
 
 /* ── GPS ── */
 let gpsAtual = null;
-function capturarGPS(pfx) {
-  const sId = pfx === 'es' ? 'es-gps-status' : 'gps-status';
-  const cId = pfx === 'es' ? 'es-gps-coord' : 'gps-coord';
-  const st = document.getElementById(sId), co = document.getElementById(cId);
-  if (!navigator.geolocation) { st.textContent = 'GPS indisponível neste aparelho'; return; }
-  st.textContent = 'Capturando GPS…'; co.textContent = '';
+
+/* Atualiza o texto do status/coordenadas do GPS na tela */
+function pintarGPS(pfx) {
+  const st = document.getElementById(pfx === 'es' ? 'es-gps-status' : 'gps-status');
+  const co = document.getElementById(pfx === 'es' ? 'es-gps-coord' : 'gps-coord');
+  if (!st) return;
+  if (!gpsAtual) { st.textContent = 'Sem GPS'; if (co) co.textContent = ''; return; }
+  const aj = gpsAtual.ajustado ? ' · ✔ ajustado no mapa' : '';
+  st.textContent = `GPS ok (±${Math.round(gpsAtual.prec || 0)} m)${aj}`;
+  if (co) co.textContent = gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6);
+}
+
+/* Abre o mapa pra confirmar/arrastar o pino e grava o resultado em gpsAtual.
+   Chamado logo que o GPS fixa (antes da foto) e no botão "Ver no mapa". */
+async function confirmarLocalGPS(pfx) {
+  if (typeof confirmarLocalNoMapa !== 'function') return;
+  // Se o GPS ainda não fixou, abre no centro de Campo Largo pra posicionar à mão
+  const base = gpsAtual || { lat: -25.4016, lng: -49.5266, prec: null };
+  const loc = await confirmarLocalNoMapa(base);
+  if (!loc) return;   // cancelou → mantém a leitura crua do GPS
+  gpsAtual = {
+    lat: loc.lat, lng: loc.lng, prec: loc.prec,
+    lat_gps: loc.lat_gps, lng_gps: loc.lng_gps, ajustado: loc.ajustado
+  };
+  pintarGPS(pfx);
+}
+
+function capturarGPS(pfx, autoMapa = true) {
+  const st = document.getElementById(pfx === 'es' ? 'es-gps-status' : 'gps-status');
+  const co = document.getElementById(pfx === 'es' ? 'es-gps-coord' : 'gps-coord');
+  if (!navigator.geolocation) { if (st) st.textContent = 'GPS indisponível neste aparelho'; return; }
+  if (st) st.textContent = 'Capturando GPS…'; if (co) co.textContent = '';
   navigator.geolocation.getCurrentPosition(pos => {
     gpsAtual = { lat: pos.coords.latitude, lng: pos.coords.longitude, prec: pos.coords.accuracy };
-    st.textContent = `GPS ok (±${Math.round(gpsAtual.prec)} m)`;
-    co.textContent = gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6);
+    pintarGPS(pfx);
+    if (autoMapa) confirmarLocalGPS(pfx);   // mapa aparece já de cara, antes da foto
   }, err => {
     gpsAtual = null;
-    st.textContent = 'GPS falhou: ' + (err.message || 'sem sinal');
+    if (st) st.textContent = 'GPS falhou: ' + (err.message || 'sem sinal');
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 });
 }
 

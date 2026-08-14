@@ -36,6 +36,8 @@ async function sincronizarContadorJD() {
 async function salvarEspaco() {
   const nome = document.getElementById('es-nome').value.trim();
   if (!nome) return showToast('Informe o nome do espaço.', 'error');
+
+  const g = gpsAtual;   // já corrigido no mapa quando o coletor tocou em "Capturar"
   const esp = {
     id_espaco: uuid(),
     codigo: proximoCodigoJD(),
@@ -43,8 +45,12 @@ async function salvarEspaco() {
     tipo: document.getElementById('es-tipo').value,
     endereco: document.getElementById('es-end').value.trim() || null,
     bairro: document.getElementById('es-bairro').value.trim() || null,
-    lat: gpsAtual ? gpsAtual.lat : null,
-    lng: gpsAtual ? gpsAtual.lng : null,
+    lat: g ? g.lat : null,
+    lng: g ? g.lng : null,
+    lat_gps: g ? (g.lat_gps != null ? g.lat_gps : g.lat) : null,
+    lng_gps: g ? (g.lng_gps != null ? g.lng_gps : g.lng) : null,
+    precisao_m: g && g.prec != null ? Math.round(g.prec * 10) / 10 : null,
+    ajustado: g ? !!g.ajustado : null,
     status: 'ativo',
     obs: document.getElementById('es-obs').value.trim() || null,
     criado_em: agora(),

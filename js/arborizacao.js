@@ -361,9 +361,14 @@ function editarPonto(id) {
   document.getElementById('pt-num').value = p.numeracao || '';
   document.getElementById('pt-dist').value = p.distancia_anterior_m || '';
   document.getElementById('pt-obs').value = p.obs || '';
-  // GPS existente (sem re-capturar)
+  // GPS existente (sem re-capturar) — preserva a leitura bruta original
   if (p.lat && p.lng) {
-    gpsAtual = { lat: +p.lat, lng: +p.lng, prec: p.precisao_m ? +p.precisao_m : 0 };
+    gpsAtual = {
+      lat: +p.lat, lng: +p.lng, prec: p.precisao_m ? +p.precisao_m : 0,
+      lat_gps: p.lat_gps != null ? +p.lat_gps : +p.lat,
+      lng_gps: p.lng_gps != null ? +p.lng_gps : +p.lng,
+      ajustado: !!p.ajustado
+    };
     document.getElementById('gps-status').textContent = 'GPS existente (toque em Atualizar para recapturar)';
     document.getElementById('gps-coord').textContent = gpsAtual.lat.toFixed(6) + ', ' + gpsAtual.lng.toFixed(6);
   } else {
@@ -421,13 +426,23 @@ document.addEventListener('change', e => {
   }
 });
 
-function coletarCamposPonto() {
+function coletarCamposPonto(loc) {
   const imped = chipsMarcados('pt-imped', 'on');
+  // loc = localização confirmada no mapa; se não houver, cai no GPS bruto
+  const g = loc || (gpsAtual ? {
+    lat: gpsAtual.lat, lng: gpsAtual.lng,
+    lat_gps: gpsAtual.lat_gps != null ? gpsAtual.lat_gps : gpsAtual.lat,
+    lng_gps: gpsAtual.lng_gps != null ? gpsAtual.lng_gps : gpsAtual.lng,
+    prec: gpsAtual.prec, ajustado: !!gpsAtual.ajustado
+  } : null);
   return {
     numeracao: document.getElementById('pt-num').value.trim() || null,
-    lat: gpsAtual ? gpsAtual.lat : null,
-    lng: gpsAtual ? gpsAtual.lng : null,
-    precisao_m: gpsAtual ? Math.round(gpsAtual.prec * 10) / 10 : null,
+    lat: g ? g.lat : null,
+    lng: g ? g.lng : null,
+    lat_gps: g ? g.lat_gps : null,
+    lng_gps: g ? g.lng_gps : null,
+    precisao_m: g && g.prec != null ? Math.round(g.prec * 10) / 10 : null,
+    ajustado: g ? !!g.ajustado : null,
     impedimentos: imped,
     impedimento_outro: imped.includes('outro') ? document.getElementById('pt-imped-outro').value.trim() : null,
     especie_plano: valorEspecie('pt-esp-plano') || null,
