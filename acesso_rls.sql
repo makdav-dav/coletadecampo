@@ -70,6 +70,7 @@ declare t text; p record; tem_criado_por boolean;
 begin
   foreach t in array array['arbo_ruas','arbo_trechos','arbo_pontos',
                            'jard_espacos','jard_canteiros','jard_especies',
+                           'horto_canteiros','horto_quadras','horto_itens',
                            'fotos','especies_catalogo'] loop
     if to_regclass('public.' || t) is null then continue; end if;
     for p in select policyname from pg_policies where schemaname = 'public' and tablename = t loop
@@ -83,10 +84,7 @@ begin
       where table_schema = 'public' and table_name = t and column_name = 'criado_por'
     ) into tem_criado_por;
 
-    if t = 'especies_catalogo' then
-      -- catálogo: só editor/admin mexem
-      execute format('create policy "editores escrevem" on public.%I for all to authenticated using (public.pode_editar_tudo()) with check (public.pode_editar_tudo())', t);
-    elsif tem_criado_por then
+    if tem_criado_por then
       execute format('create policy "coletores inserem" on public.%I for insert to authenticated with check (public.pode_coletar())', t);
       execute format('create policy "edita tudo ou o proprio (upd)" on public.%I for update to authenticated using (public.pode_editar_tudo() or (public.pode_coletar() and criado_por = (auth.jwt() ->> ''email''))) with check (public.pode_editar_tudo() or (public.pode_coletar() and criado_por = (auth.jwt() ->> ''email'')))', t);
       execute format('create policy "edita tudo ou o proprio (del)" on public.%I for delete to authenticated using (public.pode_editar_tudo() or (public.pode_coletar() and criado_por = (auth.jwt() ->> ''email'')))', t);

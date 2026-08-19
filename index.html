@@ -48,6 +48,11 @@
     <div><div class="action-title">Espaços de jardinagem</div><div class="action-desc">Praças, canteiros e rotatórias — com espécies e cálculo de mudas</div></div>
   </div>
 
+  <div class="card action-card" onclick="abrirHorto()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22c0-6 3-9 8-10-1 6-4 9-8 10z"/><path d="M12 22c0-5-3-7.5-7-8.5 1 5 3.5 7.5 7 8.5z"/><path d="M12 22v-6"/></svg></div>
+    <div><div class="action-title">Horto municipal</div><div class="action-desc">Inventário de mudas por canteiro, quadra e espécie</div></div>
+  </div>
+
   <div class="card action-card" onclick="abrirConsulta()">
     <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
     <div><div class="action-title">Consulta</div><div class="action-desc">Ver dados coletados, fotos e exportar planilha</div></div>
@@ -304,6 +309,196 @@
   </div>
 </section>
 
+<!-- ============ HORTO: CANTEIROS ============ -->
+<section class="page" id="page-horto">
+  <h2>Horto municipal</h2>
+  <div class="page-sub">Inventário de mudas: canteiro → quadra → espécie.</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="novoCanteiro()">+ Novo canteiro</button>
+    <button class="btn" onclick="abrirEspecies()">🌿 Catálogo de espécies</button>
+  </div>
+  <div id="cant-form" style="display:none" class="card">
+    <label>Código</label><input type="text" id="hc-cod" placeholder="C-03 (opcional)">
+    <label>Nome do canteiro</label><input type="text" id="hc-nome" placeholder="Canteiro central">
+    <div class="gps-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+      <div class="gps-txt">
+        <div id="hc-gps-status">GPS não capturado</div>
+        <div class="gps-coord" id="hc-gps-coord"></div>
+      </div>
+      <button class="btn btn-sm" style="width:auto" onclick="confirmarLocalGPS('hc')">🗺️ Mapa</button>
+      <button class="btn btn-sm" style="width:auto" onclick="capturarGPS('hc')">Capturar</button>
+    </div>
+    <label>Fotos do canteiro</label>
+    <div class="foto-strip" id="hc-fotos">
+      <button class="foto-add" onclick="document.getElementById('hc-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="hc-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'hc')">
+    <label>Observações</label><textarea id="hc-obs"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarCanteiro()">Salvar canteiro</button>
+      <button class="btn btn-sm" onclick="document.getElementById('cant-form').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <input type="text" id="horto-busca" placeholder="🔍 Buscar canteiro…" oninput="renderCanteiros()" style="margin-top:14px">
+  <div id="cant-lista" style="margin-top:10px"></div>
+</section>
+
+<!-- ============ HORTO: QUADRAS DE UM CANTEIRO ============ -->
+<section class="page" id="page-canteiro">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="cd-nome">—</div>
+      <div class="sl-sub" id="cd-sub">—</div>
+    </div>
+    <div class="sl-badge" id="cd-badge">0 quadras</div>
+  </div>
+  <div id="cd-fotos-antigas" style="margin-bottom:12px"></div>
+  <button class="btn btn-primary" onclick="novaQuadra()">+ Nova quadra</button>
+  <div id="quadra-form" style="display:none" class="card">
+    <label>Código / nome da quadra</label><input type="text" id="hq-nome" placeholder="A1">
+    <label>Fotos da quadra</label>
+    <div class="foto-strip" id="hq-fotos">
+      <button class="foto-add" onclick="document.getElementById('hq-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="hq-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'hq')">
+    <label>Observações</label><textarea id="hq-obs"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarQuadra()">Salvar quadra</button>
+      <button class="btn btn-sm" onclick="document.getElementById('quadra-form').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+  <div id="cd-quadras" style="margin-top:14px"></div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="abrirHorto()">Voltar aos canteiros</button>
+  </div>
+</section>
+
+<!-- ============ HORTO: ITENS DE UMA QUADRA ============ -->
+<section class="page" id="page-quadra">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="qd-nome">—</div>
+      <div class="sl-sub" id="qd-sub">—</div>
+    </div>
+    <div class="sl-badge" id="qd-badge">0 itens</div>
+  </div>
+
+  <div id="qd-fotos-antigas" style="margin-bottom:12px"></div>
+  <div id="qd-itens"></div>
+
+  <div class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px">
+      <div class="action-title" id="hi-form-title">Novo item de inventário</div>
+      <button id="hi-cancel-btn" class="btn btn-sm" style="display:none; width:auto" onclick="sairEdicaoItem()">Cancelar edição</button>
+    </div>
+    <label>Espécie</label>
+    <select id="hi-especie" onchange="hortoEspecieChange()"></select>
+    <input type="text" id="hi-especie-livre" placeholder="Nome da espécie" style="display:none; margin-top:8px">
+    <button type="button" class="btn btn-sm" style="width:auto; margin-top:8px" onclick="abrirEspecieRapida()">+ Cadastrar nova espécie</button>
+    <div id="hi-nova-esp" class="card" style="display:none; margin-top:8px; background:var(--accent-light)">
+      <label>Nome popular *</label><input type="text" id="qa-nome" placeholder="Ex.: Quaresmeira">
+      <label>Nome científico</label><input type="text" id="qa-cient" placeholder="Tibouchina granulosa">
+      <label>Classificação</label>
+      <div class="chips" id="qa-class">
+        <span class="chip" data-v="frutifera" onclick="selEspChip(this,'qa-class')">Frutífera</span>
+        <span class="chip" data-v="ornamental" onclick="selEspChip(this,'qa-class')">Ornamental</span>
+      </div>
+      <label>Origem</label>
+      <div class="chips" id="qa-origem">
+        <span class="chip" data-v="nativa" onclick="selEspChip(this,'qa-origem')">Nativa</span>
+        <span class="chip" data-v="exotica" onclick="selEspChip(this,'qa-origem')">Exótica</span>
+      </div>
+      <div id="qa-fruto-wrap" style="display:none">
+        <label>Tipo de fruto</label>
+        <div class="chips" id="qa-fruto">
+          <span class="chip" data-v="comestivel" onclick="this.classList.toggle('on')">Comestível</span>
+          <span class="chip" data-v="fauna" onclick="this.classList.toggle('on')">De fauna</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="salvarEspecieRapida()">Salvar e usar</button>
+        <button class="btn btn-sm" onclick="document.getElementById('hi-nova-esp').style.display='none'">Fechar</button>
+      </div>
+    </div>
+
+    <label>Porte</label>
+    <div class="chips" id="hi-porte">
+      <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno</span>
+      <span class="chip" data-v="medio" onclick="pickOne(this)">Médio</span>
+      <span class="chip" data-v="grande" onclick="pickOne(this)">Grande</span>
+    </div>
+
+    <label>Quantidade de mudas</label>
+    <input type="number" id="hi-qtd" inputmode="numeric" step="1" placeholder="20">
+
+    <label>Fotos do item</label>
+    <div class="foto-strip" id="hi-fotos">
+      <button class="foto-add" onclick="document.getElementById('hi-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="hi-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'hi')">
+
+    <label>Observações</label><textarea id="hi-obs" placeholder="Ex.: mudas prontas para plantio"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="hi-save-btn" onclick="salvarItem()">Salvar item</button>
+    </div>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-danger-ghost" id="hi-del-btn" style="display:none" onclick="excluirItem()">Excluir item</button>
+      <button class="btn" onclick="voltarCanteiro()">Voltar às quadras</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HORTO: CATÁLOGO DE ESPÉCIES ============ -->
+<section class="page" id="page-especies">
+  <h2>Catálogo de espécies</h2>
+  <div class="page-sub">Base de espécies do inventário — com dados botânicos.</div>
+  <button class="btn btn-primary" onclick="novaEspecie()">+ Nova espécie</button>
+  <div id="esp-form" style="display:none" class="card">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px">
+      <div class="action-title" id="esp-form-title">Nova espécie</div>
+      <button id="esp-form-cancel" class="btn btn-sm" style="width:auto" onclick="cancelarEspecie()">Cancelar</button>
+    </div>
+    <label>Nome popular *</label><input type="text" id="sp-nome" placeholder="Ipê-amarelo">
+    <label>Nome científico</label><input type="text" id="sp-cient" placeholder="Handroanthus albus">
+    <label>Classificação</label>
+    <div class="chips" id="sp-class">
+      <span class="chip" data-v="frutifera" onclick="selEspChip(this,'sp-class')">Frutífera</span>
+      <span class="chip" data-v="ornamental" onclick="selEspChip(this,'sp-class')">Ornamental</span>
+    </div>
+    <label>Origem</label>
+    <div class="chips" id="sp-origem">
+      <span class="chip" data-v="nativa" onclick="selEspChip(this,'sp-origem')">Nativa</span>
+      <span class="chip" data-v="exotica" onclick="selEspChip(this,'sp-origem')">Exótica</span>
+    </div>
+    <div id="sp-fruto-wrap" style="display:none">
+      <label>Tipo de fruto</label>
+      <div class="chips" id="sp-fruto">
+        <span class="chip" data-v="comestivel" onclick="this.classList.toggle('on')">Comestível</span>
+        <span class="chip" data-v="fauna" onclick="this.classList.toggle('on')">De fauna</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarEspecie()">Salvar espécie</button>
+    </div>
+  </div>
+  <input type="text" id="esp-busca" placeholder="🔍 Buscar espécie…" oninput="renderEspecies()" style="margin-top:14px">
+  <div id="esp-lista" style="margin-top:10px"></div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="abrirHorto()">Voltar ao Horto</button>
+  </div>
+</section>
+
 <!-- ============ FILA ============ -->
 <section class="page" id="page-fila">
   <h2>Fila de sincronização</h2>
@@ -387,6 +582,10 @@
     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 21h18M5 21V10l7-6 7 6v11"/><path d="M9 21v-5h6v5"/></svg>
     Jardinagem
   </button>
+  <button class="nav-btn" data-p="horto" onclick="navTo('horto')">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22c0-6 3-9 8-10-1 6-4 9-8 10z"/><path d="M12 22c0-5-3-7.5-7-8.5 1 5 3.5 7.5 7 8.5z"/><path d="M12 22v-6"/></svg>
+    Horto
+  </button>
   <button class="nav-btn" data-p="consulta" onclick="navTo('consulta')">
     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
     Consulta
@@ -406,6 +605,7 @@
 <script src="js/core.js"></script>
 <script src="js/arborizacao.js"></script>
 <script src="js/jardinagem.js"></script>
+<script src="js/horto.js"></script>
 <script src="js/importacao.js"></script>
 <script src="js/consulta.js"></script>
 <script src="js/painel-dash.js"></script>

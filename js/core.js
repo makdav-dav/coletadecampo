@@ -47,9 +47,19 @@ function updateAuthUI(connected) {
 function sessionValida() { return !!session; }
 function driveTokenValido() { return providerToken && Date.now() < providerTokenExp - 60000; }
 
+let papelUsuario = LS.get('papel') || null;
+async function carregarPapel() {
+  if (!userEmail) return;
+  try {
+    const r = await sbSelect('usuarios_autorizados', 'select=papel&email=eq.' + encodeURIComponent(userEmail));
+    if (r && r[0] && r[0].papel) { papelUsuario = r[0].papel; LS.set('papel', papelUsuario); }
+  } catch (e) { console.warn('papel:', e.message); }
+}
+
 async function onSessionReady() {
   updateAuthUI(true);
   carregarCatalogo();
+  carregarPapel();
   sincronizarContadorJD();
   drainQueue();
 }
@@ -205,6 +215,15 @@ function uuid() {
 }
 function agora() { return new Date().toISOString(); }
 
+/* Nome de arquivo seguro p/ o Storage do Supabase (sem acento/espaço/símbolo).
+   Chaves com caracteres fora de [A-Za-z0-9._-] são rejeitadas (InvalidKey). */
+function slugArquivo(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // tira acentos: ê→e, ç→c
+    .replace(/[^A-Za-z0-9._-]/g, '_')                   // resto vira "_"
+    .replace(/_+/g, '_');
+}
+
 async function enqueue(item) {
   item.id = item.id || uuid();
   item.status = 'pendente';
@@ -306,7 +325,7 @@ async function drainQueue(manual) {
         } else if (it.tipo === 'foto') {
           const b = await idbGet('blobs', it.blobId);
           if (b && b.blob) {
-            const path = `${it.entidade}/${it.idEntidade}/${it.nomeArquivo}`;
+            const path = `${it.entidade}/${it.idEntidade}/${slugArquivo(it.nomeArquivo)}`;
             const up = await uploadFotoStorage(b.blob, path);
             await sbInsert('fotos', {
               id_foto: it.idFoto, drive_file_id: up.url, web_link: up.url,
@@ -356,7 +375,7 @@ if (!navigator.onLine) document.body.classList.add('offline');
 setInterval(() => drainQueue(), 45000);
 
 /* ── FOTOS: compressão + carimbo (GPS, endereço, data/hora) ── */
-const fotosForm = { pt: [], es: [], ct: [] };
+const fotosForm = { pt: [], es: [], ct: [], hc: [], hq: [], hi: [] };
 
 /* Geocodificação reversa (OpenStreetMap/Nominatim) com cache e timeout curto */
 const endCache = {};
@@ -558,7 +577,7 @@ async function enfileirarFotos(pfx, entidade, idEntidade, rotulo) {
     await enqueue({
       tipo: 'foto', blobId: f.id, idFoto: uuid(),
       entidade, idEntidade,
-      nomeArquivo: `${entidade}_${rotulo}_${Date.now()}_${i + 1}.jpg`
+      nomeArquivo: `${entidade}_${slugArquivo(rotulo)}_${Date.now()}_${i + 1}.jpg`
     });
   }
 }
@@ -567,9 +586,12 @@ async function enfileirarFotos(pfx, entidade, idEntidade, rotulo) {
 let gpsAtual = null;
 
 /* Atualiza o texto do status/coordenadas do GPS na tela */
+function gpsElId(pfx, sufixo) {
+  return (pfx && pfx !== 'pt') ? `${pfx}-gps-${sufixo}` : `gps-${sufixo}`;
+}
 function pintarGPS(pfx) {
-  const st = document.getElementById(pfx === 'es' ? 'es-gps-status' : 'gps-status');
-  const co = document.getElementById(pfx === 'es' ? 'es-gps-coord' : 'gps-coord');
+  const st = document.getElementById(gpsElId(pfx, 'status'));
+  const co = document.getElementById(gpsElId(pfx, 'coord'));
   if (!st) return;
   if (!gpsAtual) { st.textContent = 'Sem GPS'; if (co) co.textContent = ''; return; }
   const aj = gpsAtual.ajustado ? ' · ✔ ajustado no mapa' : '';
@@ -593,8 +615,8 @@ async function confirmarLocalGPS(pfx) {
 }
 
 function capturarGPS(pfx) {
-  const st = document.getElementById(pfx === 'es' ? 'es-gps-status' : 'gps-status');
-  const co = document.getElementById(pfx === 'es' ? 'es-gps-coord' : 'gps-coord');
+  const st = document.getElementById(gpsElId(pfx, 'status'));
+  const co = document.getElementById(gpsElId(pfx, 'coord'));
   if (!navigator.geolocation) { if (st) st.textContent = 'GPS indisponível neste aparelho'; return; }
   if (st) st.textContent = 'Capturando GPS…'; if (co) co.textContent = '';
   navigator.geolocation.getCurrentPosition(pos => {
@@ -614,7 +636,7 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(s => s.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => {
-    const alvo = { home:'home', arbo:'arbo', rua:'arbo', ponto:'arbo', jard:'jard', espaco:'jard', consulta:'consulta', fila:'fila' }[p];
+    const alvo = { home:'home', arbo:'arbo', rua:'arbo', ponto:'arbo', jard:'jard', espaco:'jard', horto:'horto', canteiro:'horto', quadra:'horto', especies:'horto', consulta:'consulta', fila:'fila' }[p];
     b.classList.toggle('active', b.dataset.p === alvo);
   });
   window.scrollTo(0, 0);
@@ -622,6 +644,7 @@ function showPage(p) {
 function navTo(p) {
   if (p === 'arbo') return abrirArbo();
   if (p === 'jard') return abrirJard();
+  if (p === 'horto') return abrirHorto();
   if (p === 'consulta') return abrirConsulta();
   if (p === 'fila') { showPage('fila'); return renderFila(); }
   showPage(p);
@@ -634,10 +657,11 @@ function catalogo() {
 async function carregarCatalogo() {
   try {
     const rows = await sbSelect('especies_catalogo',
-      'select=id_especie,nome_popular,categoria,uso&ativo=eq.true&order=nome_popular.asc');
+      'select=id_especie,nome_popular,categoria,uso,nome_cientifico,classificacao,origem,fruto&ativo=eq.true&order=nome_popular.asc');
     const norm = (rows || []).map(c => ({ ...c, uso: Array.isArray(c.uso) ? c.uso.join(',') : (c.uso || '') }));
     LS.set('catalogo', JSON.stringify(norm));
     montarSelectsEspecies();
+    if (typeof montarSelectHortoEspecies === 'function') montarSelectHortoEspecies();
   } catch(e) { console.warn('catalogo:', e.message); }
 }
 function optionsEspecies(uso, incluirVazio) {
