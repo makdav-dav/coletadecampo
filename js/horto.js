@@ -31,7 +31,8 @@ function stripFotosHorto(fs) {
     `<a href="${fullDrive(f.drive_file_id)}" target="_blank" rel="noopener"><img class="foto-thumb" src="${thumbDrive(f.drive_file_id)}" alt="foto" onerror="this.style.opacity=0.25"></a>`).join('')}</div>`;
 }
 
-const PORTES = { pequeno: 'Pequeno', medio: 'Médio', grande: 'Grande' };
+const PORTES = { pequenininha: 'Pequenininha', pequeno: 'Pequeno', medio: 'Médio', grande: 'Grande', arborizacao: 'Arborização' };
+const FITO = { saudavel: 'Saudável', praga: 'Praga', doenca: 'Doença', recuperacao: 'Em recuperação', morta: 'Morta / descarte' };
 
 function cacheCanteiros() { try { return JSON.parse(LS.get('cache_canteiros') || '[]'); } catch (e) { return []; } }
 function setCacheCanteiros(arr) { LS.set('cache_canteiros', JSON.stringify(arr.slice(0, 200))); }
@@ -258,6 +259,7 @@ function limparFormItem() {
   document.getElementById('hi-especie-livre').value = '';
   document.getElementById('hi-especie-livre').style.display = 'none';
   document.getElementById('hi-qtd').value = '';
+  document.getElementById('hi-fito').value = '';
   document.getElementById('hi-obs').value = '';
   limparChips('hi-porte', 'on-green');
   fotosForm.hi = [];
@@ -282,6 +284,7 @@ function coletarCamposItem() {
     especie_texto: especieTexto,
     porte,
     quantidade: isNaN(qtd) ? null : qtd,
+    estado_fito: document.getElementById('hi-fito').value || null,
     obs: document.getElementById('hi-obs').value.trim() || null
   };
 }
@@ -341,6 +344,7 @@ function editarItem(id) {
   hortoEspecieChange();
   marcarChip('hi-porte', i.porte);
   document.getElementById('hi-qtd').value = i.quantidade != null ? i.quantidade : '';
+  document.getElementById('hi-fito').value = i.estado_fito || '';
   document.getElementById('hi-obs').value = i.obs || '';
   // strip de fotos NOVAS a anexar (as já salvas seguem na lista)
   fotosForm.hi = [];

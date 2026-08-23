@@ -6,12 +6,13 @@
    direto, sem cache.
    Suba a versão do cache (v1 → v2 …) quando quiser forçar limpeza.
    ================================================================ */
-const CACHE = 'coleta-campo-v2';
+const CACHE = 'coleta-campo-v3';
 
 const ASSETS = [
   './',
   './index.html',
   './painel.html',
+  './horto-painel.html',
   './manifest.webmanifest',
   './logo.png',
   './icon-maskable.svg',

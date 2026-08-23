@@ -112,6 +112,13 @@ create policy "coletores enviam fotos" on storage.objects
   with check (bucket_id = 'fotos-campo' and public.pode_coletar());
 create policy "leitura publica fotos" on storage.objects
   for select using (bucket_id = 'fotos-campo');
+create policy "coletores atualizam fotos" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'fotos-campo' and public.pode_coletar())
+  with check (bucket_id = 'fotos-campo' and public.pode_coletar());
+create policy "editores apagam fotos" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'fotos-campo' and public.pode_editar_tudo());
 
 -- 6) SEU ACESSO DE ADMIN (edite se quiser adicionar mais gente já) --
 insert into usuarios_autorizados (email, papel) values

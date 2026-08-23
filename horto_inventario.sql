@@ -53,6 +53,9 @@ create table if not exists public.horto_itens (
   criado_por    text
 );
 
+-- 4b) Estado fitossanitário do item (idempotente) ----------------
+alter table public.horto_itens add column if not exists estado_fito text;
+
 -- 5) RLS: mesmas regras dos outros módulos ------------------------
 --    select: autorizado · insert: coletor+ ·
 --    update/delete: editor/admin OU coletor no próprio registro

@@ -430,13 +430,25 @@
 
     <label>Porte</label>
     <div class="chips" id="hi-porte">
+      <span class="chip" data-v="pequenininha" onclick="pickOne(this)">Pequenininha</span>
       <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno</span>
       <span class="chip" data-v="medio" onclick="pickOne(this)">Médio</span>
       <span class="chip" data-v="grande" onclick="pickOne(this)">Grande</span>
+      <span class="chip" data-v="arborizacao" onclick="pickOne(this)">Arborização</span>
     </div>
 
     <label>Quantidade de mudas</label>
     <input type="number" id="hi-qtd" inputmode="numeric" step="1" placeholder="20">
+
+    <label>Estado fitossanitário</label>
+    <select id="hi-fito">
+      <option value="">— selecione —</option>
+      <option value="saudavel">Saudável</option>
+      <option value="praga">Praga</option>
+      <option value="doenca">Doença</option>
+      <option value="recuperacao">Em recuperação</option>
+      <option value="morta">Morta / descarte</option>
+    </select>
 
     <label>Fotos do item</label>
     <div class="foto-strip" id="hi-fotos">

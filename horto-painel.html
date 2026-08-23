@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horto — Painel de Inventário</title>
+<meta name="theme-color" content="#1F3B72">
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text-primary); }
+  a { color: var(--accent); }
+
+  header {
+    background: var(--accent-dark); color: #fff; padding: 10px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  header .hl { display: flex; align-items: center; gap: 10px; }
+  header .logo { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.14); display: grid; place-items: center; }
+  header .ht { font-size: 15px; font-weight: 700; line-height: 1.1; }
+  header .hs { font-size: 11.5px; opacity: .8; }
+  header .hr { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  header .hr a { color: #fff; opacity: .85; text-decoration: none; font-size: 12.5px; }
+  header .hr a:hover { opacity: 1; }
+  #u-email { opacity: .85; font-size: 12.5px; }
+  #u-papel { font-size: 11px; background: rgba(255,255,255,.16); padding: 3px 9px; border-radius: 20px; }
+  #btn-auth { background: #fff; color: var(--accent-dark); border: none; border-radius: 20px; padding: 7px 15px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  #btn-auth.connected { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,.5); }
+
+  .gate { max-width: 460px; margin: 90px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 34px; text-align: center; box-shadow: var(--shadow); }
+  .gate h2 { font-size: 20px; margin-bottom: 8px; }
+  .gate p { color: var(--text-secondary); font-size: 14px; margin-bottom: 18px; }
+
+  .shell { display: grid; grid-template-columns: 208px 1fr; min-height: calc(100vh - 54px); }
+  .side { background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px; }
+  .side .navb { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; padding: 10px 12px; border-radius: 9px; font-size: 14px; color: var(--text-secondary); cursor: pointer; font-weight: 600; }
+  .side .navb:hover { background: var(--bg); }
+  .side .navb.on { background: var(--accent-light); color: var(--accent-dark); }
+  .side .navb svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .content { padding: 20px 24px; overflow-x: auto; }
+
+  .view-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .view-h h2 { font-size: 19px; }
+  .tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .inp, select.inp { border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; font-size: 13px; background: var(--surface); color: var(--text-primary); min-width: 180px; }
+  .btn { border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); border-radius: 8px; padding: 8px 13px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn:hover { border-color: var(--accent-mid); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn-sm { padding: 6px 10px; font-size: 12.5px; }
+  .lnk { background: none; border: none; color: var(--accent); font-weight: 600; cursor: pointer; font-size: 13px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .tile .lbl { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .tile .num { font-size: 27px; font-weight: 800; margin-top: 3px; letter-spacing: -.5px; }
+  .tile .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+  .cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .cards2 { grid-template-columns: 1fr; } .shell { grid-template-columns: 1fr; } .side { display: flex; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); } }
+  .sec { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .sec h3 { font-size: 14px; margin-bottom: 12px; }
+
+  .bars { display: flex; flex-direction: column; gap: 9px; }
+  .brow { font-size: 12.5px; }
+  .brow .bl { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+  .brow .bn { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brow .bv { color: var(--text-secondary); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .track { height: 8px; background: var(--trilha); border-radius: 5px; overflow: hidden; }
+  .track > span { display: block; height: 100%; border-radius: 5px; }
+
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { text-align: left; background: var(--bg); color: var(--text-secondary); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; padding: 10px 12px; position: sticky; top: 0; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: var(--accent-light); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { padding: 26px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  .bk { position: fixed; inset: 0; background: rgba(20,30,24,.5); opacity: 0; pointer-events: none; transition: .2s; z-index: 60; }
+  .bk.open { opacity: 1; pointer-events: auto; }
+  .dw { position: fixed; top: 0; right: 0; height: 100%; width: min(440px, 100%); background: var(--bg); z-index: 61; transform: translateX(100%); transition: .22s; display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(0,0,0,.18); }
+  .dw.open { transform: none; }
+  .dw-h { background: var(--accent-dark); color: #fff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .dw-h .t { font-size: 16px; font-weight: 700; }
+  .dw-h .s { font-size: 12px; opacity: .8; margin-top: 2px; }
+  .dw-x { background: rgba(255,255,255,.15); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; font-size: 20px; cursor: pointer; }
+  .dw-b { padding: 16px 18px; overflow-y: auto; flex: 1; }
+  .dw-f { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--surface); }
+  .dw-b label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin: 12px 0 5px; }
+  .dw-b input, .dw-b select, .dw-b textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 14px; background: var(--surface); color: var(--text-primary); font-family: inherit; }
+  .dw-b textarea { resize: vertical; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; margin-right: 14px; font-size: 14px; font-weight: 500; }
+  .chk input { width: auto; }
+  .fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .fotos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); }
+  .fgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .fthumb { position: relative; }
+  .fthumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); }
+  .fdel { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 6px; border: none; background: rgba(192,57,47,.92); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; }
+  .dw-b label.addfoto { display: inline-flex; align-items: center; gap: 6px; margin: 10px 0 0; border: 1px dashed var(--accent-mid); color: var(--accent); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; text-transform: none; }
+  .ro { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; font-size: 12.5px; color: var(--text-secondary); margin-top: 12px; }
+
+  .viz { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; align-items: center; justify-content: center; z-index: 90; padding: 24px; }
+  .viz.open { display: flex; }
+  .viz img { max-width: 96vw; max-height: 92vh; border-radius: 8px; }
+  .viz button { position: absolute; top: 18px; right: 22px; background: rgba(255,255,255,.15); color: #fff; border: none; width: 40px; height: 40px; border-radius: 10px; font-size: 22px; cursor: pointer; }
+
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(120%); background: #222; color: #fff; padding: 11px 20px; border-radius: 24px; font-size: 13.5px; font-weight: 600; z-index: 100; transition: .25s; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { background: var(--success); } #toast.error { background: var(--danger); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); color: var(--text-secondary); }
+  .idgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .idcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+  .idfotos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; background: var(--bg); }
+  .idfotos img { width: 100%; aspect-ratio: 1; object-fit: cover; cursor: pointer; }
+  .idnofoto { grid-column: 1 / -1; padding: 30px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+  .idbody { padding: 12px 14px; }
+  .idloc { font-size: 11.5px; color: var(--text-muted); }
+  .idcur { font-size: 13.5px; font-weight: 600; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hl">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c0-6 3-9 8-10-1 6-4 9-8 10z"/><path d="M12 22c0-5-3-7.5-7-8.5 1 5 3.5 7.5 7 8.5z"/><path d="M12 22v-6"/></svg></div>
+    <div>
+      <div class="ht">Horto Municipal — Inventário</div>
+      <div class="hs">SMMA Campo Largo · painel de gestão</div>
+    </div>
+  </div>
+  <div class="hr">
+    <a href="painel.html">Painel geral</a>
+    <a href="index.html">App de campo</a>
+    <span id="u-papel" hidden></span>
+    <span id="u-email"></span>
+    <button id="btn-auth" onclick="handleAuth()">Conectar</button>
+  </div>
+</header>
+
+<div class="gate" id="gate">
+  <h2>Painel do Horto</h2>
+  <p id="gate-msg">Conecte-se com sua conta Google autorizada para gerenciar o inventário do horto.</p>
+  <button class="btn btn-primary" id="gate-btn" onclick="handleAuth()">Conectar com Google</button>
+</div>
+
+<div class="shell" id="app" hidden>
+  <nav class="side" id="side"></nav>
+  <main class="content" id="content"></main>
+</div>
+
+<div class="bk" id="bk" onclick="fecharDrawer()"></div>
+<aside class="dw" id="dw">
+  <div class="dw-h"><div><div class="t" id="dw-t">—</div><div class="s" id="dw-s">—</div></div><button class="dw-x" onclick="fecharDrawer()">×</button></div>
+  <div class="dw-b" id="dw-b"></div>
+  <div class="dw-f" id="dw-f"></div>
+</aside>
+
+<div class="viz" id="viz" onclick="this.classList.remove('open')"><button>×</button><img id="viz-img" src="" alt="foto"></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================================================================
+   HORTO — Painel de inventário (desktop / ERP)
+   Mesmo backend do app de campo (Supabase). Reusa a auth do painel.
+   ================================================================ */
+const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
+const FOTOS_BUCKET = 'fotos-campo';
+const PORTES = { pequenininha: 'Pequenininha', pequeno: 'Pequeno', medio: 'Médio', grande: 'Grande', arborizacao: 'Arborização' };
+const PORTE_COR = { pequenininha: '#A9C1E9', pequeno: '#7E9EDB', medio: '#5680D0', grande: '#294E98', arborizacao: '#1E8659' };
+const FITO = { saudavel: 'Saudável', praga: 'Praga', doenca: 'Doença', recuperacao: 'Em recuperação', morta: 'Morta / descarte' };
+const FITO_COR = { saudavel: '#1E8659', praga: '#B07222', doenca: '#C0392F', recuperacao: '#5680D0', morta: '#7A1F17' };
+const COR = { p: '#7E9EDB', m: '#5680D0', g: '#294E98', nat: '#1E8659', exo: '#B07222' };
+
+let sb = null, session = null, userEmail = null, papel = null, modoAberto = false;
+let CANT = [], QUAD = [], ITENS = [], CAT = [];
+let FOTOS = { canteiro: {}, quadra: {}, item: {} };
+let navAtual = 'dash';
+let qById = {}, cById = {};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); }));
+const nowIso = () => new Date().toISOString();
+function showToast(msg, t) { const e = $('toast'); e.textContent = msg; e.className = t || ''; e.classList.add('show'); clearTimeout(e._h); e._h = setTimeout(() => e.classList.remove('show'), 3200); }
+const thumb = v => /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w200';
+const full = v => /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w1200';
+const pode = () => modoAberto || papel === 'admin' || papel === 'editor';
+
+/* ── auth (igual ao painel) ── */
+function handleAuth() {
+  if (!sb) return showToast('Biblioteca do banco não carregou.', 'error');
+  if (session) { sb.auth.signOut(); return; }
+  sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+}
+function pintarAuth() {
+  $('btn-auth').textContent = session ? 'Sair' : 'Conectar';
+  $('btn-auth').classList.toggle('connected', !!session);
+  $('u-email').textContent = userEmail || '';
+  const pp = $('u-papel'), R = { admin: '👑 admin', editor: '✏️ editor', coletor: '📍 coletor', leitor: '👁 leitor' };
+  if (session && (papel || modoAberto)) { pp.hidden = false; pp.textContent = modoAberto ? 'acesso livre' : (R[papel] || papel); } else pp.hidden = true;
+}
+async function boot() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: 'implicit' } });
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (s) { session = s; userEmail = s.user?.email || null; }
+  sb.auth.onAuthStateChange((ev, s2) => {
+    if (ev === 'SIGNED_IN' && s2) { session = s2; userEmail = s2.user?.email || null; entrar(); }
+    else if (ev === 'SIGNED_OUT') { session = null; userEmail = null; papel = null; sairUI(); }
+  });
+  if (session) entrar(); else sairUI();
+}
+function sairUI() { pintarAuth(); $('app').hidden = true; $('gate').style.display = ''; $('gate-btn').style.display = ''; }
+async function entrar() {
+  pintarAuth();
+  $('gate-msg').textContent = 'Verificando acesso…'; $('gate-btn').style.display = 'none';
+  papel = null; modoAberto = false;
+  try { const r = await sbSelect('usuarios_autorizados', 'select=papel&email=eq.' + encodeURIComponent(userEmail)); if (r && r.length) papel = r[0].papel; }
+  catch (e) { modoAberto = true; }
+  pintarAuth();
+  if (!modoAberto && !papel) { $('gate').style.display = ''; $('app').hidden = true; $('gate-msg').innerHTML = 'A conta <b>' + esc(userEmail) + '</b> não está autorizada.<br>Peça acesso ao administrador.'; return; }
+  $('gate').style.display = 'none'; $('app').hidden = false;
+  montarNav();
+  carregarTudo();
+}
+
+/* ── REST ── */
+async function sbFetch(path, opts = {}) {
+  if (!session) throw new Error('SEM_SESSION');
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
+    method: opts.method || 'GET',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json', Prefer: opts.prefer || 'return=minimal' },
+    body: opts.body
+  });
+  if (!r.ok) { const t = await r.text().catch(() => ''); let m = t; try { const j = JSON.parse(t); m = j.message || j.hint || t; } catch (e) {} throw new Error(m || 'HTTP ' + r.status); }
+  const ct = r.headers.get('content-type') || ''; if (!ct.includes('json')) return null;
+  const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+}
+const sbSelect = (t, q) => sbFetch(t + (q ? '?' + q : ''), { prefer: 'return=representation' });
+const sbUpdate = (t, f, patch) => sbFetch(t + '?' + f, { method: 'PATCH', body: JSON.stringify(patch) });
+const sbInsert = (t, d) => sbFetch(t, { method: 'POST', body: JSON.stringify(d) });
+const sbDelete = (t, f) => sbFetch(t + '?' + f, { method: 'DELETE' });
+
+async function carregarFotos(entidade, ids) {
+  const map = {}; ids = [...new Set(ids)].filter(Boolean);
+  for (let i = 0; i < ids.length; i += 60) {
+    const chunk = ids.slice(i, i + 60);
+    try { const fs = await sbSelect('fotos', `select=id_foto,drive_file_id,id_entidade&entidade=eq.${entidade}&id_entidade=in.(${chunk.join(',')})`) || []; fs.forEach(f => (map[f.id_entidade] = map[f.id_entidade] || []).push(f)); }
+    catch (e) { console.warn('fotos', e.message); }
+  }
+  return map;
+}
+
+/* ── dados + agregados ── */
+async function carregarTudo() {
+  $('content').innerHTML = '<div class="empty">Carregando inventário…</div>';
+  try {
+    const [c, q, i, cat] = await Promise.all([
+      sbSelect('horto_canteiros', 'select=*&order=criado_em.asc').then(r => r || []),
+      sbSelect('horto_quadras', 'select=*&order=criado_em.asc').then(r => r || []),
+      sbSelect('horto_itens', 'select=*&order=criado_em.asc').then(r => r || []),
+      sbSelect('especies_catalogo', 'select=*&ativo=eq.true&order=nome_popular.asc').then(r => r || [])
+    ]);
+    CANT = c; QUAD = q; ITENS = i; CAT = cat;
+    [FOTOS.canteiro, FOTOS.quadra, FOTOS.item] = await Promise.all([
+      carregarFotos('horto_canteiro', c.map(x => x.id_canteiro)),
+      carregarFotos('horto_quadra', q.map(x => x.id_quadra)),
+      carregarFotos('horto_item', i.map(x => x.id_item))
+    ]);
+    computar();
+    render();
+  } catch (e) { $('content').innerHTML = '<div class="empty">Erro ao carregar: ' + esc(e.message) + '</div>'; }
+}
+function computar() {
+  qById = {}; cById = {};
+  CANT.forEach(c => { c._quadras = 0; c._itens = 0; c._mudas = 0; c._especies = new Set(); cById[c.id_canteiro] = c; });
+  QUAD.forEach(q => { q._itens = 0; q._mudas = 0; q._c = cById[q.id_canteiro]; qById[q.id_quadra] = q; if (q._c) q._c._quadras++; });
+  ITENS.forEach(it => {
+    const q = qById[it.id_quadra]; it._q = q; const c = q ? q._c : null; it._c = c;
+    const n = +it.quantidade || 0;
+    if (q) { q._itens++; q._mudas += n; }
+    if (c) { c._itens++; c._mudas += n; if (it.especie_texto) c._especies.add(it.especie_texto.toLowerCase()); }
+  });
+}
+const catByNome = () => { const m = {}; CAT.forEach(c => m[(c.nome_popular || '').toLowerCase()] = c); return m; };
+function resumoEspecies() {
+  const m = {};
+  ITENS.forEach(it => {
+    const nome = it.especie_texto || '(sem nome)'; const k = nome.toLowerCase();
+    if (!m[k]) m[k] = { nome, total: 0, pequeno: 0, medio: 0, grande: 0, cant: new Set() };
+    const n = +it.quantidade || 0; m[k].total += n;
+    if (it.porte && m[k][it.porte] != null) m[k][it.porte] += n;
+    if (it._c) m[k].cant.add(it._c.id_canteiro);
+  });
+  return Object.values(m).sort((a, b) => b.total - a.total);
+}
+
+/* ── navegação ── */
+const NAV = [
+  ['dash', 'Dashboard', '<path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"/>'],
+  ['canteiros', 'Canteiros', '<rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/>'],
+  ['quadras', 'Quadras', '<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>'],
+  ['itens', 'Inventário', '<path d="M4 6h16M4 12h16M4 18h16"/>'],
+  ['identificar', 'Identificar', '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'],
+  ['especies', 'Espécies', '<path d="M12 22c0-6 3-9 8-10-1 6-4 9-8 10zM12 22c0-5-3-7.5-7-8.5 1 5 3.5 7.5 7 8.5z"/>'],
+  ['relatorios', 'Relatórios', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>']
+];
+function montarNav() {
+  $('side').innerHTML = NAV.map(([id, lbl, ic]) =>
+    `<button class="navb ${id === navAtual ? 'on' : ''}" data-n="${id}" onclick="irPara('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>${lbl}</button>`).join('');
+}
+function irPara(v) { navAtual = v; document.querySelectorAll('.navb').forEach(b => b.classList.toggle('on', b.dataset.n === v)); render(); }
+function render() { ({ dash: renderDash, canteiros: renderCanteiros, quadras: renderQuadras, itens: renderItens, identificar: renderIdent, especies: renderEspecies, relatorios: renderRelatorios }[navAtual] || renderDash)(); }
+
+/* ── componentes ── */
+function tabela(headers, rows, vazio) {
+  if (!rows.length) return '<div class="tbl-wrap"><div class="empty">' + (vazio || 'Nada aqui.') + '</div></div>';
+  return `<div class="tbl-wrap"><table><thead><tr>${headers.map(h => `<th class="${h.n ? 'num' : ''}">${h.t != null ? h.t : h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map(c => `<td class="${c && c.n ? 'num' : ''}">${c && c.h != null ? c.h : (c == null ? '' : c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+const N = v => ({ n: true, h: v });
+function bars(data, cor) {
+  const max = Math.max(1, ...data.map(d => d.value));
+  return `<div class="bars">${data.map(d => `<div class="brow"><div class="bl"><span class="bn">${esc(d.label)}</span><span class="bv">${d.value}</span></div><div class="track"><span style="width:${Math.round(d.value / max * 100)}%;background:${d.cor || cor}"></span></div></div>`).join('') || '<div class="empty">Sem dados.</div>'}</div>`;
+}
+
+/* ── DASHBOARD ── */
+function renderDash() {
+  const totMudas = ITENS.reduce((s, it) => s + (+it.quantidade || 0), 0);
+  const esp = resumoEspecies();
+  const porte = {}; Object.keys(PORTES).forEach(k => porte[k] = 0);
+  const fito = {}; Object.keys(FITO).forEach(k => fito[k] = 0); let semFito = 0;
+  ITENS.forEach(it => { const n = +it.quantidade || 0;
+    if (porte[it.porte] != null) porte[it.porte] += n;
+    if (it.estado_fito && fito[it.estado_fito] != null) fito[it.estado_fito] += n; else semFito += n; });
+  const nFotos = Object.values(FOTOS).reduce((s, m) => s + Object.values(m).reduce((a, l) => a + l.length, 0), 0);
+  // origem (via catálogo)
+  const byNome = catByNome(); const orig = { nativa: 0, exotica: 0 };
+  ITENS.forEach(it => { const c = byNome[(it.especie_texto || '').toLowerCase()]; if (c && orig[c.origem] != null) orig[c.origem] += (+it.quantidade || 0); });
+
+  const tile = (num, lbl, sub) => `<div class="tile"><div class="lbl">${lbl}</div><div class="num">${num}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Dashboard do inventário</h2><div class="tools"><button class="btn" onclick="carregarTudo()">↻ Atualizar</button></div></div>
+    <div class="kpis">
+      ${tile(CANT.length, 'Canteiros', QUAD.length + ' quadra(s)')}
+      ${tile(QUAD.length, 'Quadras', '')}
+      ${tile(ITENS.length, 'Registros', 'linhas de inventário')}
+      ${tile(totMudas.toLocaleString('pt-BR'), 'Total de mudas', '')}
+      ${tile(esp.length, 'Espécies no inventário', CAT.length + ' no catálogo')}
+      ${tile(nFotos, 'Fotos', '')}
+    </div>
+    <div class="cards2">
+      <div>
+        <div class="sec"><h3>Mudas por porte</h3>${bars(Object.keys(PORTES).map(k => ({ label: PORTES[k], value: porte[k], cor: PORTE_COR[k] })))}</div>
+        <div class="sec"><h3>Estado fitossanitário</h3>${bars(Object.keys(FITO).map(k => ({ label: FITO[k], value: fito[k], cor: FITO_COR[k] })).concat(semFito ? [{ label: 'Sem informação', value: semFito, cor: '#C9D2E0' }] : []))}</div>
+        <div class="sec"><h3>Origem das mudas</h3>${bars([
+          { label: 'Nativa', value: orig.nativa, cor: COR.nat },
+          { label: 'Exótica', value: orig.exotica, cor: COR.exo }])}
+          <div class="sub" style="margin-top:8px;color:var(--text-muted);font-size:11.5px">calculado pelas espécies com origem preenchida no catálogo</div></div>
+      </div>
+      <div>
+        <div class="sec"><h3>Top espécies por quantidade</h3>${bars(esp.slice(0, 12).map(e => ({ label: e.nome, value: e.total, cor: COR.m }))) }</div>
+      </div>
+    </div>
+    <div class="sec"><h3>Mudas por canteiro</h3>${bars(CANT.slice().sort((a, b) => b._mudas - a._mudas).map(c => ({ label: c.nome || c.codigo || 'Canteiro', value: c._mudas, cor: COR.g }))) }</div>`;
+}
+
+/* ── CANTEIROS ── */
+function renderCanteiros() {
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Canteiros</h2><div class="tools">
+      <input id="q-cant" class="inp" placeholder="🔍 buscar canteiro" oninput="tblCant()">
+      ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novoCanteiro()">+ Canteiro</button>' : ''}
+      <button class="btn btn-sm" onclick="exportCanteiros()">⬇ CSV</button>
+    </div></div><div id="tbl"></div>`;
+  tblCant();
+}
+function tblCant() {
+  const q = ($('q-cant').value || '').toLowerCase().trim();
+  const rows = CANT.filter(c => (`${c.codigo || ''} ${c.nome || ''}`).toLowerCase().includes(q))
+    .map(c => [
+      esc(c.codigo || ''), esc(c.nome || '—'), N(c._quadras), N(c._itens), N(c._mudas), N(c._especies.size),
+      c.lat ? `<a href="https://www.google.com/maps?q=${+c.lat},${+c.lng}" target="_blank" rel="noopener">📍</a>` : '—',
+      `<button class="lnk" onclick="editCanteiro('${c.id_canteiro}')">${pode() ? 'editar' : 'ver'}</button>`
+    ]);
+  $('tbl').innerHTML = tabela([{t:'Código'}, {t:'Nome'}, {t:'Quadras',n:1}, {t:'Itens',n:1}, {t:'Mudas',n:1}, {t:'Espécies',n:1}, {t:'GPS'}, {t:''}], rows, 'Nenhum canteiro cadastrado.');
+}
+
+/* ── QUADRAS ── */
+function renderQuadras() {
+  const ops = CANT.map(c => `<option value="${c.id_canteiro}">${esc(c.nome || c.codigo || 'Canteiro')}</option>`).join('');
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Quadras</h2><div class="tools">
+      <select id="f-cant" class="inp" onchange="tblQuad()"><option value="">Todos os canteiros</option>${ops}</select>
+      <input id="q-quad" class="inp" placeholder="🔍 buscar quadra" oninput="tblQuad()">
+      ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novaQuadra()">+ Quadra</button>' : ''}
+      <button class="btn btn-sm" onclick="exportQuadras()">⬇ CSV</button>
+    </div></div><div id="tbl"></div>`;
+  tblQuad();
+}
+function tblQuad() {
+  const q = ($('q-quad').value || '').toLowerCase().trim(), fc = $('f-cant').value;
+  const rows = QUAD.filter(x => (!fc || x.id_canteiro === fc) && (`${x.codigo || ''} ${x.nome || ''}`).toLowerCase().includes(q))
+    .map(x => [
+      esc(x._c ? (x._c.nome || x._c.codigo || '—') : '—'), esc(x.nome || x.codigo || '—'),
+      N(x._itens), N(x._mudas),
+      `<button class="lnk" onclick="editQuadra('${x.id_quadra}')">${pode() ? 'editar' : 'ver'}</button>`
+    ]);
+  $('tbl').innerHTML = tabela([{t:'Canteiro'}, {t:'Quadra'}, {t:'Itens',n:1}, {t:'Mudas',n:1}, {t:''}], rows, 'Nenhuma quadra.');
+}
+
+/* ── ITENS (inventário) ── */
+function renderItens() {
+  const ops = CANT.map(c => `<option value="${c.id_canteiro}">${esc(c.nome || c.codigo || 'Canteiro')}</option>`).join('');
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Inventário (itens)</h2><div class="tools">
+      <select id="f-cant2" class="inp" onchange="tblItens()"><option value="">Todos os canteiros</option>${ops}</select>
+      <select id="f-porte" class="inp" onchange="tblItens()"><option value="">Todos os portes</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+      <input id="q-item" class="inp" placeholder="🔍 buscar espécie" oninput="tblItens()">
+      ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novoItem()">+ Item</button>' : ''}
+      <button class="btn btn-sm" onclick="exportItens()">⬇ CSV</button>
+    </div></div><div id="tbl"></div>`;
+  tblItens();
+}
+function tblItens() {
+  const q = ($('q-item').value || '').toLowerCase().trim(), fc = $('f-cant2').value, fp = $('f-porte').value;
+  const rows = ITENS.filter(it => (!fc || (it._c && it._c.id_canteiro === fc)) && (!fp || it.porte === fp) && (it.especie_texto || '').toLowerCase().includes(q))
+    .map(it => [
+      esc(it._c ? (it._c.nome || it._c.codigo || '—') : '—'),
+      esc(it._q ? (it._q.nome || it._q.codigo || '—') : '—'),
+      esc(it.especie_texto || '—'), esc(PORTES[it.porte] || it.porte || '—'),
+      N(it.quantidade != null ? it.quantidade : ''), esc(FITO[it.estado_fito] || ''), esc(it.obs || ''),
+      `<button class="lnk" onclick="editItem('${it.id_item}')">${pode() ? 'editar' : 'ver'}</button>`
+    ]);
+  $('tbl').innerHTML = tabela([{t:'Canteiro'}, {t:'Quadra'}, {t:'Espécie'}, {t:'Porte'}, {t:'Qtd',n:1}, {t:'Estado'}, {t:'Obs'}, {t:''}], rows, 'Nenhum item.');
+}
+
+/* ── IDENTIFICAR (mudas sem espécie definida) ── */
+function precisaIdentificar(it) {
+  const n = (it.especie_texto || '').trim().toLowerCase();
+  if (!n) return true;
+  return /identific|indefinid|desconhec|\bsp\.?\b|prov[aá]vel|a definir|verificar|\?/i.test(n);
+}
+function renderIdent() {
+  const pend = ITENS.filter(precisaIdentificar);
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Identificar espécies</h2><div class="tools">
+      <input id="q-id" class="inp" placeholder="🔍 filtrar por local ou nome" oninput="tblIdent()">
+      <span class="pill">${pend.length} a identificar</span>
+    </div></div>
+    <p style="font-size:13px;color:var(--text-secondary);margin:-6px 0 14px">Itens cuja espécie ainda não foi definida (vazio, “a identificar”, “sp.”, “provável…”). Veja as fotos, escolha do catálogo ou digite, e confirme.</p>
+    <div id="idlist"></div>${dataListEsp()}`;
+  tblIdent();
+}
+function tblIdent() {
+  const q = ($('q-id').value || '').toLowerCase().trim();
+  const pend = ITENS.filter(precisaIdentificar).filter(it => !q || (`${it.especie_texto || ''} ${it._c ? (it._c.nome || it._c.codigo) : ''} ${it._q ? (it._q.nome || it._q.codigo) : ''}`).toLowerCase().includes(q));
+  if (!pend.length) { $('idlist').innerHTML = '<div class="tbl-wrap"><div class="empty">Nada a identificar 🎉</div></div>'; return; }
+  $('idlist').innerHTML = `<div class="idgrid">${pend.map(cardIdent).join('')}</div>`;
+}
+function cardIdent(it) {
+  const fs = FOTOS.item[it.id_item] || [];
+  const fh = fs.length
+    ? fs.slice(0, 4).map(f => `<img src="${thumb(f.drive_file_id)}" onclick="$('viz-img').src='${full(f.drive_file_id)}';$('viz').classList.add('open')" onerror="this.style.opacity=.2">`).join('')
+    : '<div class="idnofoto">sem foto — abra o item para anexar</div>';
+  return `<div class="idcard">
+    <div class="idfotos">${fh}</div>
+    <div class="idbody">
+      <div class="idloc">${esc(it._c ? (it._c.nome || it._c.codigo) : '—')} › ${esc(it._q ? (it._q.nome || it._q.codigo) : '—')}</div>
+      <div class="idcur">${esc(it.especie_texto || '(sem nome)')} · ${esc(PORTES[it.porte] || it.porte || '—')}${it.quantidade != null ? ' · ' + it.quantidade + ' muda(s)' : ''}</div>
+      ${pode() ? `
+        <input class="inp" id="id-${it.id_item}" list="dl-esp" placeholder="Espécie identificada…" style="width:100%;margin-top:9px">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="salvarIdent('${it.id_item}')">✓ Identificar</button>
+          <button class="btn btn-sm" onclick="editItem('${it.id_item}')">abrir</button>
+        </div>` : `<button class="btn btn-sm" style="margin-top:9px" onclick="editItem('${it.id_item}')">abrir</button>`}
+    </div>
+  </div>`;
+}
+async function salvarIdent(id) {
+  const it = ITENS.find(x => x.id_item === id); if (!it) return;
+  const esp = ($('id-' + id).value || '').trim();
+  if (!esp) return showToast('Digite a espécie identificada.', 'error');
+  const cat = catByNome()[esp.toLowerCase()];
+  const patch = { especie_texto: esp, id_especie: cat ? cat.id_especie : null };
+  try { await sbUpdate('horto_itens', 'id_item=eq.' + id, patch); Object.assign(it, patch); computar(); tblIdent(); showToast('Identificado: ' + esp, 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── ESPÉCIES ── */
+function renderEspecies() {
+  const mudasPorEsp = {}; resumoEspecies().forEach(e => mudasPorEsp[e.nome.toLowerCase()] = e.total);
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Catálogo de espécies</h2><div class="tools">
+      <input id="q-esp" class="inp" placeholder="🔍 buscar espécie" oninput="tblEsp()">
+      ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novaEspecie()">+ Espécie</button>' : ''}
+      <button class="btn btn-sm" onclick="exportEspecies()">⬇ CSV</button>
+    </div></div><div id="tbl"></div>`;
+  window._mudasPorEsp = mudasPorEsp;
+  tblEsp();
+}
+function tblEsp() {
+  const q = ($('q-esp').value || '').toLowerCase().trim();
+  const tag = { frutifera: 'Frutífera', ornamental: 'Ornamental' };
+  const rows = CAT.filter(c => (`${c.nome_popular || ''} ${c.nome_cientifico || ''}`).toLowerCase().includes(q))
+    .map(c => [
+      esc(c.nome_popular || '—'), `<i>${esc(c.nome_cientifico || '')}</i>`,
+      esc(tag[c.classificacao] || ''), esc(c.origem === 'nativa' ? 'Nativa' : c.origem === 'exotica' ? 'Exótica' : ''),
+      esc(c.tipo || ''), N(window._mudasPorEsp[(c.nome_popular || '').toLowerCase()] || 0),
+      `<button class="lnk" onclick="editEspecie('${c.id_especie}')">${pode() ? 'editar' : 'ver'}</button>`
+    ]);
+  $('tbl').innerHTML = tabela([{t:'Nome popular'}, {t:'Nome científico'}, {t:'Classif.'}, {t:'Origem'}, {t:'Tipo'}, {t:'Mudas',n:1}, {t:''}], rows, 'Catálogo vazio.');
+}
+
+/* ── RELATÓRIOS ── */
+function renderRelatorios() {
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Relatórios</h2></div>
+    <div class="cards2">
+      <div class="sec"><h3>Inventário completo</h3><p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Cada item: canteiro, quadra, espécie, científico, porte e quantidade.</p><button class="btn btn-primary" onclick="exportItens()">⬇ Baixar CSV</button></div>
+      <div class="sec"><h3>Resumo por espécie</h3><p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Total de mudas por espécie, quebrado por porte.</p><button class="btn btn-primary" onclick="exportResumoEspecies()">⬇ Baixar CSV</button></div>
+      <div class="sec"><h3>Resumo por canteiro</h3><p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Quadras, itens, espécies e mudas de cada canteiro.</p><button class="btn btn-primary" onclick="exportCanteiros()">⬇ Baixar CSV</button></div>
+      <div class="sec"><h3>Catálogo de espécies</h3><p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Todos os campos botânicos das espécies cadastradas.</p><button class="btn btn-primary" onclick="exportEspecies()">⬇ Baixar CSV</button></div>
+    </div>`;
+}
+
+/* ── EXPORT CSV ── */
+function baixarCSV(nome, linhas) {
+  const escC = v => { v = v == null ? '' : String(v); return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const txt = '﻿' + linhas.map(r => r.map(escC).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' }));
+  a.download = nome; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function exportCanteiros() {
+  const L = [['Código', 'Nome', 'Quadras', 'Itens', 'Mudas', 'Espécies', 'Lat', 'Lng', 'Obs']];
+  CANT.forEach(c => L.push([c.codigo, c.nome, c._quadras, c._itens, c._mudas, c._especies.size, c.lat, c.lng, c.obs]));
+  baixarCSV('canteiros.csv', L);
+}
+function exportQuadras() {
+  const L = [['Canteiro', 'Quadra', 'Itens', 'Mudas', 'Obs']];
+  QUAD.forEach(q => L.push([q._c ? (q._c.nome || q._c.codigo) : '', q.nome || q.codigo, q._itens, q._mudas, q.obs]));
+  baixarCSV('quadras.csv', L);
+}
+function exportItens() {
+  const byNome = catByNome();
+  const L = [['Canteiro', 'Quadra', 'Espécie', 'Nome científico', 'Porte', 'Quantidade', 'Estado fitossanitário', 'Observações']];
+  ITENS.forEach(it => { const cat = byNome[(it.especie_texto || '').toLowerCase()]; L.push([it._c ? (it._c.nome || it._c.codigo) : '', it._q ? (it._q.nome || it._q.codigo) : '', it.especie_texto, cat ? cat.nome_cientifico : '', PORTES[it.porte] || it.porte, it.quantidade, FITO[it.estado_fito] || '', it.obs]); });
+  baixarCSV('inventario_horto.csv', L);
+}
+function exportResumoEspecies() {
+  const L = [['Espécie', 'Total mudas', 'Pequeno', 'Médio', 'Grande', 'Nº canteiros']];
+  resumoEspecies().forEach(e => L.push([e.nome, e.total, e.pequeno, e.medio, e.grande, e.cant.size]));
+  baixarCSV('resumo_especies.csv', L);
+}
+function exportEspecies() {
+  const mp = {}; resumoEspecies().forEach(e => mp[e.nome.toLowerCase()] = e.total);
+  const L = [['Nome popular', 'Nome científico', 'Classificação', 'Origem', 'Fruto', 'Ornamental', 'Tipo', 'Floração', 'Copa', 'Persistência', 'Crescimento', 'Mudas no inventário']];
+  CAT.forEach(c => L.push([c.nome_popular, c.nome_cientifico, c.classificacao, c.origem, c.fruto, c.ornamental === true ? 'Sim' : c.ornamental === false ? 'Não' : '', c.tipo, c.floracao, c.tipo_copa, c.persistencia, c.crescimento, mp[(c.nome_popular || '').toLowerCase()] || 0]));
+  baixarCSV('catalogo_especies.csv', L);
+}
+
+/* ── DRAWER genérico ── */
+function abrirDrawer(t, s, body, footer) { $('dw-t').textContent = t; $('dw-s').textContent = s || ''; $('dw-b').innerHTML = body; $('dw-f').innerHTML = footer; $('bk').classList.add('open'); $('dw').classList.add('open'); }
+function fecharDrawer() { $('bk').classList.remove('open'); $('dw').classList.remove('open'); }
+const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
+const numOrNull = id => { const v = val(id); return v === '' ? null : (isNaN(+v) ? v : +v); };
+/* Gerenciador de fotos no drawer: ver, excluir e adicionar.
+   tipo = 'canteiro' | 'quadra' | 'item'  → entidade 'horto_<tipo>' */
+function fotosManager(tipo, id) { return `<div id="dw-fotos">${fotosInner(tipo, id)}</div>`; }
+function fotosInner(tipo, id) {
+  const lista = (FOTOS[tipo] && FOTOS[tipo][id]) || [];
+  const thumbs = lista.map(f => `
+    <div class="fthumb">
+      <img src="${thumb(f.drive_file_id)}" onclick="$('viz-img').src='${full(f.drive_file_id)}';$('viz').classList.add('open')" onerror="this.style.opacity=.2">
+      ${pode() ? `<button class="fdel" title="Excluir foto" onclick="excluirFotoP('${tipo}','${id}','${esc(f.id_foto)}')">×</button>` : ''}
+    </div>`).join('');
+  return `<label>Fotos (${lista.length})</label>
+    <div class="fgrid">${thumbs || '<div class="ro" style="grid-column:1/-1">Sem fotos ainda.</div>'}</div>
+    ${pode() ? `<label class="addfoto">+ Adicionar foto<input type="file" accept="image/*" style="display:none" onchange="addFotoP('${tipo}','${id}',this)"></label>` : ''}`;
+}
+
+async function storageUpload(blob, path) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${FOTOS_BUCKET}/${encodeURI(path)}`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' },
+    body: blob
+  });
+  if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error('Storage: ' + (t || r.status)); }
+  return `${SUPABASE_URL}/storage/v1/object/public/${FOTOS_BUCKET}/${encodeURI(path)}`;
+}
+async function storageDelete(path) {
+  const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${FOTOS_BUCKET}/${encodeURI(path)}`, {
+    method: 'DELETE', headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token }
+  });
+  if (!r.ok) throw new Error('storage ' + r.status);
+}
+function comprimirImg(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 1600; let w = img.width, h = img.height;
+      if (Math.max(w, h) > MAX) { const k = MAX / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(u);
+      cv.toBlob(b => b ? res(b) : rej(new Error('Falha ao processar')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Imagem inválida')); };
+    img.src = u;
+  });
+}
+const slugArq = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]/g, '_');
+async function addFotoP(tipo, id, input) {
+  const file = input.files[0]; input.value = '';
+  if (!file) return;
+  showToast('Enviando foto…');
+  try {
+    const blob = await comprimirImg(file);
+    const entidade = 'horto_' + tipo;
+    const path = `${entidade}/${id}/${slugArq(entidade + '_' + id + '_' + Date.now())}.jpg`;
+    const url = await storageUpload(blob, path);
+    const idFoto = uuid();
+    await sbInsert('fotos', { id_foto: idFoto, drive_file_id: url, web_link: url, entidade, id_entidade: id, criado_em: nowIso(), criado_por: userEmail });
+    (FOTOS[tipo][id] = FOTOS[tipo][id] || []).push({ id_foto: idFoto, drive_file_id: url, id_entidade: id });
+    $('dw-fotos').innerHTML = fotosInner(tipo, id);
+    showToast('Foto adicionada.', 'success');
+  } catch (e) { showToast('Erro na foto: ' + e.message, 'error'); }
+}
+async function excluirFotoP(tipo, id, idFoto) {
+  if (!confirm('Excluir esta foto? Não dá para desfazer.')) return;
+  const arr = (FOTOS[tipo] && FOTOS[tipo][id]) || [];
+  const f = arr.find(x => String(x.id_foto) === String(idFoto));
+  if (!f) return;
+  try {
+    await sbDelete('fotos', 'id_foto=eq.' + encodeURIComponent(idFoto));
+    const marker = '/object/public/' + FOTOS_BUCKET + '/';
+    const i = (f.drive_file_id || '').indexOf(marker);
+    if (i >= 0) { try { await storageDelete(decodeURIComponent(f.drive_file_id.slice(i + marker.length))); } catch (e) { console.warn('storage del:', e.message); } }
+    FOTOS[tipo][id] = arr.filter(x => String(x.id_foto) !== String(idFoto));
+    $('dw-fotos').innerHTML = fotosInner(tipo, id);
+    showToast('Foto excluída.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+const dis = () => pode() ? '' : 'disabled';
+
+/* ── CANTEIRO editar/novo/excluir ── */
+function editCanteiro(id) {
+  const c = cById[id]; if (!c) return;
+  abrirDrawer('Canteiro', c.nome || c.codigo || '', `
+    ${fotosManager('canteiro', id)}
+    <label>Código</label><input id="f-cod" value="${esc(c.codigo || '')}" ${dis()}>
+    <label>Nome</label><input id="f-nome" value="${esc(c.nome || '')}" ${dis()}>
+    <div class="row2"><div><label>Latitude</label><input id="f-lat" value="${c.lat != null ? c.lat : ''}" ${dis()}></div><div><label>Longitude</label><input id="f-lng" value="${c.lng != null ? c.lng : ''}" ${dis()}></div></div>
+    <label>Observações</label><textarea id="f-obs" rows="3" ${dis()}>${esc(c.obs || '')}</textarea>
+    <div class="ro">${c._quadras} quadra(s) · ${c._itens} item(ns) · ${c._mudas} muda(s)</div>`,
+    pode() ? `<button class="btn btn-primary" style="flex:1" onclick="salvarCanteiro('${id}')">Salvar</button><button class="btn btn-danger" onclick="excluirCanteiro('${id}')">Excluir</button>` : `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`);
+}
+async function salvarCanteiro(id) {
+  const patch = { codigo: val('f-cod') || null, nome: val('f-nome') || null, lat: numOrNull('f-lat'), lng: numOrNull('f-lng'), obs: val('f-obs') || null };
+  try { await sbUpdate('horto_canteiros', 'id_canteiro=eq.' + id, patch); Object.assign(cById[id], patch); computar(); fecharDrawer(); render(); showToast('Canteiro salvo.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function novoCanteiro() {
+  abrirDrawer('Novo canteiro', '', `
+    <label>Código</label><input id="f-cod" placeholder="C-01">
+    <label>Nome</label><input id="f-nome" placeholder="Canteiro central">
+    <div class="row2"><div><label>Latitude</label><input id="f-lat"></div><div><label>Longitude</label><input id="f-lng"></div></div>
+    <label>Observações</label><textarea id="f-obs" rows="3"></textarea>`,
+    `<button class="btn btn-primary" style="flex:1" onclick="criarCanteiro()">Criar</button><button class="btn" onclick="fecharDrawer()">Cancelar</button>`);
+}
+async function criarCanteiro() {
+  const nome = val('f-nome'), cod = val('f-cod');
+  if (!nome && !cod) return showToast('Informe nome ou código.', 'error');
+  const d = { id_canteiro: uuid(), codigo: cod || null, nome: nome || null, lat: numOrNull('f-lat'), lng: numOrNull('f-lng'), obs: val('f-obs') || null, criado_em: nowIso(), criado_por: userEmail };
+  try { await sbInsert('horto_canteiros', d); CANT.push(d); computar(); fecharDrawer(); render(); showToast('Canteiro criado.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function excluirCanteiro(id) {
+  const c = cById[id];
+  if (!confirm(`Excluir o canteiro "${c.nome || c.codigo}"?\n\nIsso apaga também suas ${c._quadras} quadra(s) e ${c._itens} item(ns).`)) return;
+  try {
+    await sbDelete('horto_canteiros', 'id_canteiro=eq.' + id);
+    ITENS = ITENS.filter(x => !(x._c && x._c.id_canteiro === id));
+    QUAD = QUAD.filter(x => x.id_canteiro !== id);
+    CANT = CANT.filter(x => x.id_canteiro !== id);
+    computar(); fecharDrawer(); render(); showToast('Canteiro excluído.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── QUADRA editar/novo/excluir ── */
+function selCanteiro(id, sel) { return `<select id="${id}">${CANT.map(c => `<option value="${c.id_canteiro}" ${c.id_canteiro === sel ? 'selected' : ''}>${esc(c.nome || c.codigo || 'Canteiro')}</option>`).join('')}</select>`; }
+function editQuadra(id) {
+  const q = qById[id]; if (!q) return;
+  abrirDrawer('Quadra', q._c ? (q._c.nome || q._c.codigo) : '', `
+    ${fotosManager('quadra', id)}
+    <label>Canteiro</label>${pode() ? selCanteiro('f-cant', q.id_canteiro) : `<input value="${esc(q._c ? (q._c.nome || q._c.codigo) : '')}" disabled>`}
+    <label>Código / nome</label><input id="f-nome" value="${esc(q.nome || q.codigo || '')}" ${dis()}>
+    <label>Observações</label><textarea id="f-obs" rows="3" ${dis()}>${esc(q.obs || '')}</textarea>
+    <div class="ro">${q._itens} item(ns) · ${q._mudas} muda(s)</div>`,
+    pode() ? `<button class="btn btn-primary" style="flex:1" onclick="salvarQuadra('${id}')">Salvar</button><button class="btn btn-danger" onclick="excluirQuadra('${id}')">Excluir</button>` : `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`);
+}
+async function salvarQuadra(id) {
+  const nome = val('f-nome'); const patch = { id_canteiro: val('f-cant') || qById[id].id_canteiro, codigo: nome, nome: nome, obs: val('f-obs') || null };
+  try { await sbUpdate('horto_quadras', 'id_quadra=eq.' + id, patch); Object.assign(qById[id], patch); computar(); fecharDrawer(); render(); showToast('Quadra salva.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function novaQuadra() {
+  if (!CANT.length) return showToast('Cadastre um canteiro primeiro.', 'error');
+  abrirDrawer('Nova quadra', '', `
+    <label>Canteiro</label>${selCanteiro('f-cant', CANT[0].id_canteiro)}
+    <label>Código / nome</label><input id="f-nome" placeholder="A1">
+    <label>Observações</label><textarea id="f-obs" rows="3"></textarea>`,
+    `<button class="btn btn-primary" style="flex:1" onclick="criarQuadra()">Criar</button><button class="btn" onclick="fecharDrawer()">Cancelar</button>`);
+}
+async function criarQuadra() {
+  const nome = val('f-nome'); if (!nome) return showToast('Informe o código/nome.', 'error');
+  const d = { id_quadra: uuid(), id_canteiro: val('f-cant'), codigo: nome, nome: nome, obs: val('f-obs') || null, criado_em: nowIso(), criado_por: userEmail };
+  try { await sbInsert('horto_quadras', d); QUAD.push(d); computar(); fecharDrawer(); render(); showToast('Quadra criada.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function excluirQuadra(id) {
+  const q = qById[id];
+  if (!confirm(`Excluir a quadra "${q.nome || q.codigo}"?\n\nIsso apaga também seus ${q._itens} item(ns).`)) return;
+  try { await sbDelete('horto_quadras', 'id_quadra=eq.' + id); ITENS = ITENS.filter(x => x.id_quadra !== id); QUAD = QUAD.filter(x => x.id_quadra !== id); computar(); fecharDrawer(); render(); showToast('Quadra excluída.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── ITEM editar/novo/excluir ── */
+function selQuadra(id, sel) {
+  return `<select id="${id}">${QUAD.map(q => `<option value="${q.id_quadra}" ${q.id_quadra === sel ? 'selected' : ''}>${esc((q._c ? (q._c.nome || q._c.codigo) : '?') + ' › ' + (q.nome || q.codigo || 'quadra'))}</option>`).join('')}</select>`;
+}
+function selPorte(sel) { return `<select id="f-porte-e"><option value="">—</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+function selFito(sel) { return `<select id="f-fito"><option value="">—</option>${Object.entries(FITO).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+function dataListEsp() { return `<datalist id="dl-esp">${CAT.map(c => `<option value="${esc(c.nome_popular)}">`).join('')}</datalist>`; }
+function editItem(id) {
+  const it = ITENS.find(x => x.id_item === id); if (!it) return;
+  abrirDrawer('Item de inventário', it._c ? (it._c.nome || it._c.codigo) : '', `
+    ${fotosManager('item', id)}
+    <label>Quadra</label>${pode() ? selQuadra('f-quad', it.id_quadra) : `<input value="${esc((it._c ? (it._c.nome || it._c.codigo) : '') + ' › ' + (it._q ? (it._q.nome || it._q.codigo) : ''))}" disabled>`}
+    <label>Espécie</label><input id="f-esp" list="dl-esp" value="${esc(it.especie_texto || '')}" ${dis()}>${dataListEsp()}
+    <div class="row2"><div><label>Porte</label>${selPorte(it.porte)}</div><div><label>Quantidade</label><input id="f-qtd" type="number" value="${it.quantidade != null ? it.quantidade : ''}" ${dis()}></div></div>
+    <label>Estado fitossanitário</label>${selFito(it.estado_fito)}
+    <label>Observações</label><textarea id="f-obs" rows="3" ${dis()}>${esc(it.obs || '')}</textarea>`,
+    pode() ? `<button class="btn btn-primary" style="flex:1" onclick="salvarItem('${id}')">Salvar</button><button class="btn btn-danger" onclick="excluirItem('${id}')">Excluir</button>` : `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`);
+}
+function patchItem() {
+  const esp = val('f-esp'); const cat = catByNome()[esp.toLowerCase()];
+  return { id_quadra: ($('f-quad') ? $('f-quad').value : undefined), especie_texto: esp || null, id_especie: cat ? cat.id_especie : null, porte: $('f-porte-e').value || null, quantidade: numOrNull('f-qtd'), estado_fito: $('f-fito').value || null, obs: val('f-obs') || null };
+}
+async function salvarItem(id) {
+  const it = ITENS.find(x => x.id_item === id); const patch = patchItem();
+  try { await sbUpdate('horto_itens', 'id_item=eq.' + id, patch); Object.assign(it, patch); computar(); fecharDrawer(); render(); showToast('Item salvo.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function novoItem() {
+  if (!QUAD.length) return showToast('Cadastre uma quadra primeiro.', 'error');
+  abrirDrawer('Novo item', '', `
+    <label>Quadra</label>${selQuadra('f-quad', QUAD[0].id_quadra)}
+    <label>Espécie</label><input id="f-esp" list="dl-esp" placeholder="Nome da espécie">${dataListEsp()}
+    <div class="row2"><div><label>Porte</label>${selPorte('')}</div><div><label>Quantidade</label><input id="f-qtd" type="number"></div></div>
+    <label>Estado fitossanitário</label>${selFito('')}
+    <label>Observações</label><textarea id="f-obs" rows="3"></textarea>`,
+    `<button class="btn btn-primary" style="flex:1" onclick="criarItem()">Criar</button><button class="btn" onclick="fecharDrawer()">Cancelar</button>`);
+}
+async function criarItem() {
+  const esp = val('f-esp'); if (!esp) return showToast('Informe a espécie.', 'error');
+  const cat = catByNome()[esp.toLowerCase()];
+  const d = { id_item: uuid(), id_quadra: $('f-quad').value, especie_texto: esp, id_especie: cat ? cat.id_especie : null, porte: $('f-porte-e').value || null, quantidade: numOrNull('f-qtd'), estado_fito: $('f-fito').value || null, obs: val('f-obs') || null, criado_em: nowIso(), criado_por: userEmail };
+  try { await sbInsert('horto_itens', d); ITENS.push(d); computar(); fecharDrawer(); render(); showToast('Item criado.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function excluirItem(id) {
+  if (!confirm('Excluir este item do inventário?')) return;
+  try { await sbDelete('horto_itens', 'id_item=eq.' + id); ITENS = ITENS.filter(x => x.id_item !== id); computar(); fecharDrawer(); render(); showToast('Item excluído.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── ESPÉCIE editar/novo ── */
+function selUnico(id, opcoes, sel) { return `<select id="${id}"><option value="">—</option>${opcoes.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+function formEspecie(c) {
+  c = c || {};
+  const fr = (c.fruto || '').split(',');
+  return `
+    <label>Nome popular *</label><input id="f-np" value="${esc(c.nome_popular || '')}">
+    <label>Nome científico</label><input id="f-nc" value="${esc(c.nome_cientifico || '')}">
+    <div class="row2">
+      <div><label>Classificação</label>${selUnico('f-cl', [['frutifera', 'Frutífera'], ['ornamental', 'Ornamental']], c.classificacao)}</div>
+      <div><label>Origem</label>${selUnico('f-or', [['nativa', 'Nativa'], ['exotica', 'Exótica']], c.origem)}</div>
+    </div>
+    <label>Fruto</label>
+    <div><label class="chk"><input type="checkbox" id="f-fc" ${fr.includes('comestivel') ? 'checked' : ''}> Comestível</label>
+      <label class="chk"><input type="checkbox" id="f-ff" ${fr.includes('fauna') ? 'checked' : ''}> De fauna</label></div>
+    <label>Ornamental</label>${selUnico('f-ornam', [['sim', 'Sim'], ['nao', 'Não']], c.ornamental === true ? 'sim' : c.ornamental === false ? 'nao' : '')}
+    <div class="row2"><div><label>Tipo</label><input id="f-tipo" value="${esc(c.tipo || '')}"></div><div><label>Floração</label><input id="f-flor" value="${esc(c.floracao || '')}"></div></div>
+    <div class="row2"><div><label>Tipo de copa</label><input id="f-copa" value="${esc(c.tipo_copa || '')}"></div><div><label>Persistência</label><input id="f-pers" value="${esc(c.persistencia || '')}"></div></div>
+    <label>Crescimento</label><input id="f-cres" value="${esc(c.crescimento || '')}">`;
+}
+function coletaEspecie() {
+  const fr = []; if ($('f-fc').checked) fr.push('comestivel'); if ($('f-ff').checked) fr.push('fauna');
+  const orn = $('f-ornam').value;
+  return {
+    nome_popular: val('f-np') || null, nome_cientifico: val('f-nc') || null,
+    classificacao: $('f-cl').value || null, origem: $('f-or').value || null,
+    fruto: fr.length ? fr.join(',') : null, ornamental: orn === 'sim' ? true : orn === 'nao' ? false : null,
+    tipo: val('f-tipo') || null, floracao: val('f-flor') || null, tipo_copa: val('f-copa') || null,
+    persistencia: val('f-pers') || null, crescimento: val('f-cres') || null
+  };
+}
+function editEspecie(id) {
+  const c = CAT.find(x => String(x.id_especie) === String(id)); if (!c) return;
+  const mudas = (window._mudasPorEsp && window._mudasPorEsp[(c.nome_popular || '').toLowerCase()]) || 0;
+  abrirDrawer('Espécie', c.nome_popular || '', formEspecie(c) + `<div class="ro">${mudas} muda(s) no inventário</div>`,
+    pode() ? `<button class="btn btn-primary" style="flex:1" onclick="salvarEspecie('${id}')">Salvar</button><button class="btn btn-danger" onclick="excluirEspecie('${id}')">Excluir</button>` : `<button class="btn" style="flex:1" onclick="fecharDrawer()">Fechar</button>`);
+}
+async function salvarEspecie(id) {
+  const patch = coletaEspecie(); if (!patch.nome_popular) return showToast('Informe o nome popular.', 'error');
+  try { await sbUpdate('especies_catalogo', 'id_especie=eq.' + id, patch); const c = CAT.find(x => String(x.id_especie) === String(id)); Object.assign(c, patch); fecharDrawer(); render(); showToast('Espécie salva.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function novaEspecie() { abrirDrawer('Nova espécie', '', formEspecie(null), `<button class="btn btn-primary" style="flex:1" onclick="criarEspecie()">Criar</button><button class="btn" onclick="fecharDrawer()">Cancelar</button>`); }
+async function criarEspecie() {
+  const d = coletaEspecie(); if (!d.nome_popular) return showToast('Informe o nome popular.', 'error');
+  d.id_especie = uuid(); d.ativo = true; d.uso = ['arborizacao', 'jardinagem', 'horto'];
+  try { await sbInsert('especies_catalogo', d); CAT.push(d); CAT.sort((a, b) => (a.nome_popular || '').localeCompare(b.nome_popular || '')); fecharDrawer(); render(); showToast('Espécie criada.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function excluirEspecie(id) {
+  if (!confirm('Excluir esta espécie do catálogo?')) return;
+  try { await sbDelete('especies_catalogo', 'id_especie=eq.' + id); CAT = CAT.filter(x => String(x.id_especie) !== String(id)); fecharDrawer(); render(); showToast('Espécie excluída.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+boot();
+</script>
+</body>
+</html>
