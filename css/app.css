@@ -116,6 +116,21 @@
   .rk-ro { background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
     padding: 9px 12px; font-size: 13px; color: var(--text-secondary); }
 
+  /* Home: seções de painéis e outras ferramentas */
+  .home-sec-title { margin: 26px 0 10px; font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted);
+    border-top: 1px solid var(--border); padding-top: 16px; }
+  .home-sec-title .tag { font-weight: 600; text-transform: none; letter-spacing: 0;
+    font-size: 11px; color: var(--text-secondary); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 20px; padding: 1px 8px; margin-left: 6px; }
+  .hub-links { display: grid; gap: 10px; }
+  .hub-link { display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px 14px; color: var(--text-primary); font-weight: 700; font-size: 15px; box-shadow: var(--shadow); }
+  .hub-link small { font-weight: 500; font-size: 12.5px; color: var(--text-secondary); }
+  .hub-link:hover { border-color: var(--accent-mid); }
+  .hub-link:active { transform: scale(.995); }
+
   .gps-box {
     display: flex; align-items: center; gap: 10px;
     background: var(--accent-light); border-radius: var(--radius); padding: 10px 12px;
