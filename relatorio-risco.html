@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório de risco de árvores</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #EEF1F6; color: #1A2233; }
+
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--accent-dark); color: #fff; padding: 10px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .bar .t { font-weight: 700; font-size: 14px; }
+  .bar .grow { flex: 1; }
+  .bar a, .bar button { color: #fff; text-decoration: none; border: 1.5px solid rgba(255,255,255,.55); background: transparent; border-radius: 20px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .bar button.solid { background: #fff; color: var(--accent-dark); border-color: #fff; }
+
+  .wrap { max-width: 820px; margin: 18px auto; padding: 0 16px; }
+  .msg { text-align: center; color: #53627C; padding: 40px; }
+
+  .report { background: #fff; border: 1px solid #D9E0EC; border-radius: 10px; padding: 26px 30px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(31,59,114,.1); }
+  .rep-h { border-bottom: 2px solid var(--accent-dark); padding-bottom: 10px; margin-bottom: 14px; }
+  .rep-h .tit { font-size: 15px; font-weight: 800; color: var(--accent-dark); text-transform: uppercase; letter-spacing: .3px; }
+  .rep-h .sub { font-size: 12px; color: #53627C; margin-top: 2px; }
+  .rep-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #53627C; margin-top: 6px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 22px; margin: 12px 0 4px; }
+  .kv { font-size: 13px; padding: 3px 0; border-bottom: 1px dotted #E1E7F0; }
+  .kv b { color: #53627C; font-weight: 600; }
+
+  h4 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--accent-dark); margin: 18px 0 6px; border-bottom: 1px solid #D9E0EC; padding-bottom: 3px; }
+  table.items { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.items td { padding: 4px 6px; border-bottom: 1px solid #EEF1F6; }
+  table.items td.sc { text-align: center; width: 42px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  table.items td.sc.hi { color: var(--danger); }
+  table.items td.sc.z { color: #94A0B6; font-weight: 400; }
+  .cols3 { column-count: 2; column-gap: 26px; }
+  .cols3 > div { break-inside: avoid; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .chip { border: 1px solid #C7D2E4; background: #F1F5FC; color: #294E98; border-radius: 20px; padding: 3px 11px; font-size: 12px; font-weight: 600; }
+  .obs { font-size: 13px; background: #F7F9FC; border: 1px solid #E1E7F0; border-radius: 8px; padding: 10px 12px; margin-top: 6px; white-space: pre-wrap; }
+
+  .fotos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .fotos a { display: block; }
+  .fotos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 6px; border: 1px solid #D9E0EC; }
+
+  @media print {
+    body { background: #fff; }
+    .no-print { display: none !important; }
+    .wrap { max-width: none; margin: 0; padding: 0; }
+    .report { border: 0; border-radius: 0; box-shadow: none; margin: 0; padding: 0 6mm; }
+    .report + .report { page-break-before: always; }
+    h4, .rep-h, .fotos a, .cols3 > div { break-inside: avoid; }
+    @page { size: A4; margin: 14mm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bar no-print">
+  <span class="t">Relatório de risco de árvores</span>
+  <span id="cnt" style="font-size:12px;opacity:.85"></span>
+  <div class="grow"></div>
+  <a href="painel-risco.html">← Voltar</a>
+  <button onclick="exportarWord()">⬇ Word</button>
+  <button class="solid" onclick="window.print()">🖨️ Imprimir</button>
+  <button id="btn-auth" onclick="handleAuth()" style="display:none">Conectar</button>
+</div>
+
+<div class="wrap" id="wrap"><div class="msg" id="msg">Carregando…</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
+
+const RK_COPA = ['Invasão de galhos acima da via/pista','Galhos ou folhas grandes interferindo na rede','Galhos secos acima da rede','Ocos nos galhos','Galhos angulados','Galhos esguios (rabo de leão)','Galhos com cabos inclusos','Forquilhas ou bifurcações','Lesões de casca nos galhos','Casca solta','Fungos','Insetos perfuradores','Ervas-de-passarinho','Folhagem rala','Poda de rebaixamento','Poda unilateral','Árvore se inclinando'];
+const RK_TRONCO = ['Invasão da pista ou calçada','Inclinação','Danos de batidas e lesões de casca','Cavidades','Obturações/corpos estranhos no interior','Aspecto da casca','Forma do tronco','Orifícios de insetos','Fungos'];
+const RK_BASE = ['Brotação epicórmica','Lesões na base','Cavidades na base','Ninhos/colméias de insetos na base','Fungos','Raízes adventícias','Elevação e fissuras do solo','Canteiro/espaço/área livre','Neiloide','Tipo do solo (profundidade, qualidade, umidade)','Poda de raízes','Restrição do meio-fio'];
+
+let sb = null, session = null, userEmail = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmtData = d => { if (!d) return '—'; const p = ('' + d).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; };
+const img = (v, w) => /^https?:\/\//.test(v) ? v : 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(v) + '&sz=w' + (w || 600);
+const linkFoto = v => /^https?:\/\//.test(v) ? v : 'https://drive.google.com/file/d/' + encodeURIComponent(v) + '/view';
+const P = new URLSearchParams(location.search);
+
+function handleAuth() { if (!sb) return; if (session) { sb.auth.signOut(); return; } sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname + location.search } }); }
+async function boot() {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true, flowType: 'implicit' } });
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (s) { session = s; userEmail = s.user?.email || null; }
+  sb.auth.onAuthStateChange((ev, s2) => { if (ev === 'SIGNED_IN' && s2) { session = s2; userEmail = s2.user?.email; carregar(); } });
+  if (session) carregar();
+  else { $('msg').innerHTML = 'Você precisa se conectar para ver o relatório.'; $('btn-auth').style.display = ''; }
+}
+async function sbSelect(t, q) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + t + (q ? '?' + q : ''), { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token } });
+  if (!r.ok) throw new Error((await r.text().catch(() => '')) || 'HTTP ' + r.status);
+  const txt = await r.text(); return txt ? JSON.parse(txt) : null;
+}
+async function carregarFotos(ids) {
+  const map = {}; ids = [...new Set(ids)].filter(Boolean);
+  for (let i = 0; i < ids.length; i += 60) {
+    try { const fs = await sbSelect('fotos', `select=drive_file_id,id_entidade&entidade=eq.arvore_risco&id_entidade=in.(${ids.slice(i, i + 60).join(',')})`) || []; fs.forEach(f => (map[f.id_entidade] = map[f.id_entidade] || []).push(f)); } catch (e) {}
+  }
+  return map;
+}
+async function carregar() {
+  $('btn-auth').style.display = 'none';
+  try {
+    const id = P.get('id');
+    let rows;
+    if (id) rows = await sbSelect('arvores_risco', 'select=*&id_risco=eq.' + encodeURIComponent(id));
+    else {
+      rows = await sbSelect('arvores_risco', 'select=*&order=criado_em.desc') || [];
+      const q = (P.get('q') || '').toLowerCase(), aval = P.get('aval'), de = P.get('de'), ate = P.get('ate');
+      rows = rows.filter(r => {
+        if (aval && r.avaliador !== aval) return false;
+        const dt = ('' + (r.criado_em || '')).slice(0, 10);
+        if (de && dt < de) return false; if (ate && dt > ate) return false;
+        if (q && !(`${r.especie || ''} ${r.endereco || ''} ${r.n_processo || ''}`).toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+    rows = rows || [];
+    if (!rows.length) { $('wrap').innerHTML = '<div class="msg">Nenhuma avaliação encontrada.</div>'; return; }
+    const fotos = await carregarFotos(rows.map(r => r.id_risco));
+    $('cnt').textContent = rows.length === 1 ? '1 avaliação' : rows.length + ' avaliações';
+    document.title = rows.length === 1 ? `Risco — ${rows[0].especie || 'árvore'}` : `Risco — ${rows.length} avaliações`;
+    $('wrap').innerHTML = rows.map(r => relatorio(r, fotos[r.id_risco] || [])).join('');
+  } catch (e) {
+    $('wrap').innerHTML = `<div class="msg">Erro: ${esc(e.message)}${/arvores_risco|relation|schema/i.test(e.message) ? '<br>Rode arvores_risco.sql no Supabase.' : ''}</div>`;
+  }
+}
+
+function blocoItens(titulo, labels, scores) {
+  scores = scores || [];
+  const linhas = labels.map((l, i) => {
+    const v = scores[i];
+    const cls = v == null ? 'z' : (v >= 2 ? 'hi' : '');
+    return `<tr><td>${esc(l)}</td><td class="sc ${cls}">${v == null ? '—' : v}</td></tr>`;
+  }).join('');
+  return `<div><table class="items"><tbody>${linhas}</tbody></table></div>`;
+}
+function relatorio(r, fotos) {
+  const coord = r.lat ? `${(+r.lat).toFixed(6)}, ${(+r.lng).toFixed(6)}` : '—';
+  const alvos = (r.alvos || []); const manejo = (r.manejo || []);
+  return `<div class="report">
+    <div class="rep-h">
+      <div class="tit">Avaliação de risco de árvore urbana</div>
+      <div class="sub">Análise visual de risco de queda — método de Seitz (2005)</div>
+      <div class="rep-meta"><span>Processo: <b>${esc(r.n_processo || '—')}</b></span><span>Data: <b>${esc(fmtData(r.criado_em))}</b></span></div>
+    </div>
+    <div class="grid2">
+      <div class="kv"><b>Espécie:</b> ${esc(r.especie || '—')}</div>
+      <div class="kv"><b>Avaliador:</b> ${esc(r.avaliador || '—')}</div>
+      <div class="kv" style="grid-column:1/-1"><b>Endereço:</b> ${esc(r.endereco || '—')}</div>
+      <div class="kv"><b>Coordenadas:</b> ${esc(coord)}</div>
+      <div class="kv"><b>Altura total:</b> ${r.altura_total != null ? esc(r.altura_total) + ' m' : '—'} &nbsp;·&nbsp; <b>DAP:</b> ${r.dap != null ? esc(r.dap) + ' cm' : '—'}</div>
+    </div>
+
+    <h4>Avaliação da copa</h4><div class="cols3">${blocoItens('Copa', RK_COPA, (r.itens || {}).copa)}</div>
+    <h4>Avaliação do tronco</h4><div class="cols3">${blocoItens('Tronco', RK_TRONCO, (r.itens || {}).tronco)}</div>
+    <h4>Base do tronco e prato das raízes</h4><div class="cols3">${blocoItens('Base', RK_BASE, (r.itens || {}).base)}</div>
+
+    <h4>Avaliação dos alvos</h4>${alvos.length ? `<div class="chips">${alvos.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : '<div style="font-size:12px;color:#94A0B6">Nenhum marcado.</div>'}
+    <h4>Recomendação de manejo</h4>${manejo.length ? `<div class="chips">${manejo.map(a => `<span class="chip">${esc(a)}</span>`).join('')}</div>` : '<div style="font-size:12px;color:#94A0B6">Nenhuma marcada.</div>'}
+    ${r.outras_opcoes ? `<div class="kv" style="margin-top:6px"><b>Outras opções:</b> ${esc(r.outras_opcoes)}</div>` : ''}
+    ${r.obs ? `<h4>Observações</h4><div class="obs">${esc(r.obs)}</div>` : ''}
+    ${fotos.length ? `<h4>Fotos (${fotos.length})</h4><div class="fotos">${fotos.map(f => `<a href="${linkFoto(f.drive_file_id)}" target="_blank" rel="noopener"><img src="${img(f.drive_file_id, 600)}" alt="foto" onerror="this.style.opacity=.2"></a>`).join('')}</div>` : ''}
+    <div style="font-size:10.5px;color:#94A0B6;margin-top:16px;text-align:right">Nota de risco por item: 0 (nenhum) a 3 (alto).</div>
+  </div>`;
+}
+/* ── Exportar para Word (.doc HTML) ── */
+const WORD_CSS = `
+  body { font-family: Calibri, Arial, sans-serif; color: #1a2233; font-size: 11pt; }
+  .report { margin: 0 0 22pt 0; }
+  .rep-h { border-bottom: 2px solid #1F3B72; padding-bottom: 4pt; margin-bottom: 8pt; }
+  .rep-h .tit { font-size: 13pt; font-weight: bold; color: #1F3B72; text-transform: uppercase; }
+  .rep-h .sub { font-size: 9pt; color: #555; }
+  .rep-meta { font-size: 9pt; color: #555; }
+  .rep-meta span { margin-right: 24pt; }
+  h4 { font-size: 10.5pt; text-transform: uppercase; color: #1F3B72; border-bottom: 1px solid #ccc; margin: 12pt 0 4pt; }
+  .kv { font-size: 10.5pt; padding: 2pt 0; }
+  .kv b { color: #555; }
+  table.items { width: 100%; border-collapse: collapse; font-size: 10pt; }
+  table.items td { padding: 2pt 5pt; border-bottom: 1px solid #eee; }
+  table.items td.sc { text-align: center; font-weight: bold; width: 40pt; }
+  table.items td.sc.hi { color: #C0392F; }
+  table.items td.sc.z { color: #999; font-weight: normal; }
+  .chip { border: 1px solid #C7D2E4; background: #F1F5FC; color: #294E98; padding: 1pt 8pt; font-size: 9pt; margin-right: 4pt; }
+  .obs { font-size: 10pt; background: #f7f9fc; border: 1px solid #e1e7f0; padding: 6pt; }
+  img { border: 1px solid #ccc; margin: 3pt; }
+`;
+function nomeArqRisco() {
+  const reps = document.querySelectorAll('.report');
+  if (reps.length === 1) { const t = (reps[0].querySelector('.kv') || {}).textContent || ''; const esp = (t.split(':')[1] || 'arvore').trim(); return 'Relatorio_risco_' + esp.replace(/[^\wÀ-ú]+/g, '_'); }
+  return 'Relatorios_risco_' + reps.length;
+}
+function exportarWord() {
+  const reps = document.querySelectorAll('#wrap .report');
+  if (!reps.length) { alert('Nada para exportar ainda.'); return; }
+  const cont = $('wrap').cloneNode(true);
+  // colunas viram bloco único; fotos e imagens ajustadas p/ Word
+  cont.querySelectorAll('.cols3').forEach(c => c.removeAttribute('class'));
+  cont.querySelectorAll('.fotos').forEach(f => f.removeAttribute('class'));
+  cont.querySelectorAll('img').forEach(im => { im.removeAttribute('onerror'); im.setAttribute('width', '200'); im.removeAttribute('style'); });
+  cont.querySelectorAll('.report').forEach((r, i) => { if (i > 0) r.style.pageBreakBefore = 'always'; });
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+    '<head><meta charset="utf-8"><title>Relatório de risco de árvores</title>' +
+    '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->' +
+    '<style>' + WORD_CSS + '</style></head><body>' + cont.innerHTML + '</body></html>';
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nomeArqRisco() + '.doc'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+boot();
+</script>
+</body>
+</html>

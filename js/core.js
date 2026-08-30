@@ -375,7 +375,7 @@ if (!navigator.onLine) document.body.classList.add('offline');
 setInterval(() => drainQueue(), 45000);
 
 /* ── FOTOS: compressão + carimbo (GPS, endereço, data/hora) ── */
-const fotosForm = { pt: [], es: [], ct: [], hc: [], hq: [], hi: [] };
+const fotosForm = { pt: [], es: [], ct: [], hc: [], hq: [], hi: [], rk: [] };
 
 /* Geocodificação reversa (OpenStreetMap/Nominatim) com cache e timeout curto */
 const endCache = {};

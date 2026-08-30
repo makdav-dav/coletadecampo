@@ -53,6 +53,11 @@
     <div><div class="action-title">Horto municipal</div><div class="action-desc">Inventário de mudas por canteiro, quadra e espécie</div></div>
   </div>
 
+  <div class="card action-card" onclick="abrirRisco()">
+    <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg></div>
+    <div><div class="action-title">Risco de árvores</div><div class="action-desc">Avaliação de risco de queda (método Seitz) por análise visual</div></div>
+  </div>
+
   <div class="card action-card" onclick="abrirConsulta()">
     <div class="action-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
     <div><div class="action-title">Consulta</div><div class="action-desc">Ver dados coletados, fotos e exportar planilha</div></div>
@@ -393,6 +398,10 @@
   <div id="qd-fotos-antigas" style="margin-bottom:12px"></div>
   <div id="qd-itens"></div>
 
+  <div class="btn-row" style="margin:12px 0">
+    <button class="btn" style="width:100%" onclick="abrirMovQuadra()">↑↓ Movimentar mudas — entradas e saídas</button>
+  </div>
+
   <div class="card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px">
       <div class="action-title" id="hi-form-title">Novo item de inventário</div>
@@ -429,12 +438,12 @@
     </div>
 
     <label>Porte</label>
-    <div class="chips" id="hi-porte">
-      <span class="chip" data-v="pequenininha" onclick="pickOne(this)">Pequenininha</span>
-      <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno</span>
-      <span class="chip" data-v="medio" onclick="pickOne(this)">Médio</span>
-      <span class="chip" data-v="grande" onclick="pickOne(this)">Grande</span>
-      <span class="chip" data-v="arborizacao" onclick="pickOne(this)">Arborização</span>
+    <div class="chips chips-porte" id="hi-porte">
+      <span class="chip" data-v="pequenininha" onclick="pickOne(this)">Pequenininha<small>0 – 15 cm</small></span>
+      <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno<small>15 – 35 cm</small></span>
+      <span class="chip" data-v="medio" onclick="pickOne(this)">Médio<small>35 – 100 cm</small></span>
+      <span class="chip" data-v="grande" onclick="pickOne(this)">Grande<small>1,0 – 1,8 m</small></span>
+      <span class="chip" data-v="arborizacao" onclick="pickOne(this)">Arborização<small>1,8 – 2,0 m</small></span>
     </div>
 
     <label>Quantidade de mudas</label>
@@ -468,6 +477,60 @@
       <button class="btn btn-danger-ghost" id="hi-del-btn" style="display:none" onclick="excluirItem()">Excluir item</button>
       <button class="btn" onclick="voltarCanteiro()">Voltar às quadras</button>
     </div>
+  </div>
+</section>
+
+<!-- ============ HORTO: MOVIMENTAÇÃO DE MUDAS (entradas/saídas) ============ -->
+<section class="page" id="page-hmov">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="hm-nome">Movimentar mudas</div>
+      <div class="sl-sub" id="hm-sub">—</div>
+    </div>
+    <div class="sl-badge" id="hm-badge">Horto</div>
+  </div>
+
+  <div class="card">
+    <div class="action-title" style="margin-bottom:8px">Nova movimentação</div>
+
+    <label>Tipo</label>
+    <div class="chips" id="hm-tipo">
+      <span class="chip on-green" data-v="entrada" onclick="hmPickTipo(this)">↑ Entrada</span>
+      <span class="chip" data-v="saida" onclick="hmPickTipo(this)">↓ Saída</span>
+    </div>
+
+    <label>Situação</label>
+    <div class="chips" id="hm-status">
+      <span class="chip on-green" data-v="realizado" onclick="hmPickStatus(this)">Realizada</span>
+      <span class="chip" data-v="previsto" onclick="hmPickStatus(this)">Prevista</span>
+    </div>
+    <div class="page-sub" style="margin-top:4px">Realizada muda o estoque agora. Prevista é só planejamento.</div>
+
+    <label>Espécie do inventário (desta quadra)</label>
+    <select id="hm-item" onchange="hmEstoqueHint()"></select>
+    <div id="hm-estoque" class="page-sub" style="margin-top:6px"></div>
+
+    <label>Quantidade de mudas</label>
+    <input type="number" id="hm-qtd" inputmode="numeric" step="1" placeholder="0">
+
+    <label id="hm-data-lbl">Data</label>
+    <input type="date" id="hm-data">
+
+    <label>Motivo</label>
+    <select id="hm-motivo"></select>
+
+    <label>Observações</label><textarea id="hm-obs" placeholder="Opcional"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarMovMobile()">Registrar movimentação</button>
+    </div>
+  </div>
+
+  <div class="action-title" style="margin:16px 0 8px">Movimentações recentes</div>
+  <div id="hm-lista"></div>
+
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="voltarQuadraDoMov()">Voltar à quadra</button>
   </div>
 </section>
 
@@ -518,6 +581,112 @@
   <button class="btn btn-primary" onclick="drainQueue(true)">Sincronizar agora</button>
   <button class="btn btn-danger-ghost" style="margin-top:8px" onclick="limparErrosFila()">Limpar registros com erro</button>
   <div id="fila-lista" style="margin-top:14px"></div>
+</section>
+
+<!-- ============ RISCO DE ÁRVORES: LISTA ============ -->
+<section class="page" id="page-risco">
+  <h2>Risco de árvores</h2>
+  <div class="page-sub">Avaliação de risco de queda por análise visual (método de Seitz, 2005).</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="novaAvaliacaoRisco()">+ Nova avaliação</button>
+  </div>
+  <input type="text" id="risco-busca" placeholder="🔍 buscar por espécie, endereço ou processo" oninput="renderRiscoLista()" style="margin-top:12px">
+  <div id="risco-lista" style="margin-top:12px"></div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="showPage('home')">Voltar ao início</button>
+  </div>
+</section>
+
+<!-- ============ RISCO DE ÁRVORES: FORMULÁRIO ============ -->
+<section class="page" id="page-risco-form">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua">Avaliação de risco</div>
+      <div class="sl-sub">Árvore urbana — método Seitz</div>
+    </div>
+    <div class="sl-badge">0 a 3</div>
+  </div>
+
+  <!-- Identificação -->
+  <div class="card">
+    <div class="action-title" style="margin-bottom:8px">Identificação</div>
+    <label>Nº do processo</label><input type="text" id="rk-proc" placeholder="Opcional">
+    <label>Espécie</label>
+    <input type="text" id="rk-esp" list="rk-esp-list" placeholder="Nome da espécie">
+    <datalist id="rk-esp-list"></datalist>
+    <label>Técnico avaliador</label>
+    <div class="rk-ro" id="rk-avaliador">—</div>
+    <label>Endereço</label><input type="text" id="rk-end" placeholder="Rua, nº, bairro">
+    <div class="gps-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+      <div class="gps-txt">
+        <div id="rk-gps-status">GPS não capturado</div>
+        <div class="gps-coord" id="rk-gps-coord"></div>
+      </div>
+      <button class="btn btn-sm" style="width:auto" onclick="confirmarLocalGPS('rk')">🗺️ Mapa</button>
+      <button class="btn btn-sm" style="width:auto" onclick="capturarGPS('rk')">Capturar</button>
+    </div>
+    <div class="row" style="display:flex; gap:10px">
+      <div style="flex:1"><label>Altura total (m)</label><input type="number" id="rk-altura" inputmode="decimal" step="0.1" placeholder="0"></div>
+      <div style="flex:1"><label>DAP (cm)</label><input type="number" id="rk-dap" inputmode="decimal" step="0.1" placeholder="0"></div>
+    </div>
+  </div>
+
+  <!-- Fotos -->
+  <div class="card">
+    <label>Fotos da árvore</label>
+    <div class="foto-strip" id="rk-fotos">
+      <button class="foto-add" onclick="document.getElementById('rk-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="rk-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'rk')">
+  </div>
+
+  <!-- Itens de avaliação (0 a 3) -->
+  <div class="card">
+    <div class="action-title">Avaliação da copa</div>
+    <div class="page-sub" style="margin-bottom:6px">Grau de risco de cada item: 0 (nenhum) a 3 (alto).</div>
+    <div id="rk-copa" class="rk-bloco"></div>
+  </div>
+  <div class="card">
+    <div class="action-title">Avaliação do tronco</div>
+    <div id="rk-tronco" class="rk-bloco"></div>
+  </div>
+  <div class="card">
+    <div class="action-title">Base do tronco e prato das raízes</div>
+    <div id="rk-base" class="rk-bloco"></div>
+  </div>
+
+  <!-- Alvos -->
+  <div class="card">
+    <div class="action-title" style="margin-bottom:6px">Avaliação dos alvos</div>
+    <div class="page-sub" style="margin-bottom:8px">Marque o que se aplica ao redor da árvore.</div>
+    <div class="chips" id="rk-alvos">
+      <span class="chip" data-v="Rua residencial pouco movimentada" onclick="this.classList.toggle('on')">Rua residencial pouco movimentada</span>
+      <span class="chip" data-v="Parques amplos / pouca visitação" onclick="this.classList.toggle('on')">Parques amplos / pouca visitação</span>
+      <span class="chip" data-v="Estacionamentos em horário comercial" onclick="this.classList.toggle('on')">Estacionamentos em horário comercial</span>
+    </div>
+  </div>
+
+  <!-- Recomendação de manejo -->
+  <div class="card">
+    <div class="action-title" style="margin-bottom:6px">Recomendação de manejo</div>
+    <div class="chips" id="rk-manejo">
+      <span class="chip" data-v="Poda de levantamento de copa" onclick="this.classList.toggle('on')">Poda de levantamento de copa</span>
+      <span class="chip" data-v="Poda de limpeza" onclick="this.classList.toggle('on')">Poda de limpeza</span>
+      <span class="chip" data-v="Poda de segurança" onclick="this.classList.toggle('on')">Poda de segurança</span>
+      <span class="chip" data-v="Supressão" onclick="this.classList.toggle('on')">Supressão</span>
+    </div>
+    <label>Outras opções</label><input type="text" id="rk-outras" placeholder="Descreva, se houver">
+    <label>Observações</label><textarea id="rk-obs" placeholder="Observações gerais da avaliação"></textarea>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="salvarAvaliacaoRisco()">Salvar avaliação</button>
+    <button class="btn" onclick="abrirRisco()">Cancelar</button>
+  </div>
 </section>
 
 <!-- ============ CONSULTA ============ -->
@@ -618,6 +787,7 @@
 <script src="js/arborizacao.js"></script>
 <script src="js/jardinagem.js"></script>
 <script src="js/horto.js"></script>
+<script src="js/risco.js"></script>
 <script src="js/importacao.js"></script>
 <script src="js/consulta.js"></script>
 <script src="js/painel-dash.js"></script>
