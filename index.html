@@ -393,6 +393,10 @@
   <div id="qd-fotos-antigas" style="margin-bottom:12px"></div>
   <div id="qd-itens"></div>
 
+  <div class="btn-row" style="margin:12px 0">
+    <button class="btn" style="width:100%" onclick="abrirMovQuadra()">↑↓ Movimentar mudas — entradas e saídas</button>
+  </div>
+
   <div class="card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px">
       <div class="action-title" id="hi-form-title">Novo item de inventário</div>
@@ -429,12 +433,12 @@
     </div>
 
     <label>Porte</label>
-    <div class="chips" id="hi-porte">
-      <span class="chip" data-v="pequenininha" onclick="pickOne(this)">Pequenininha</span>
-      <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno</span>
-      <span class="chip" data-v="medio" onclick="pickOne(this)">Médio</span>
-      <span class="chip" data-v="grande" onclick="pickOne(this)">Grande</span>
-      <span class="chip" data-v="arborizacao" onclick="pickOne(this)">Arborização</span>
+    <div class="chips chips-porte" id="hi-porte">
+      <span class="chip" data-v="pequenininha" onclick="pickOne(this)">Pequenininha<small>0 – 15 cm</small></span>
+      <span class="chip" data-v="pequeno" onclick="pickOne(this)">Pequeno<small>15 – 35 cm</small></span>
+      <span class="chip" data-v="medio" onclick="pickOne(this)">Médio<small>35 – 100 cm</small></span>
+      <span class="chip" data-v="grande" onclick="pickOne(this)">Grande<small>1,0 – 1,8 m</small></span>
+      <span class="chip" data-v="arborizacao" onclick="pickOne(this)">Arborização<small>1,8 – 2,0 m</small></span>
     </div>
 
     <label>Quantidade de mudas</label>
@@ -468,6 +472,60 @@
       <button class="btn btn-danger-ghost" id="hi-del-btn" style="display:none" onclick="excluirItem()">Excluir item</button>
       <button class="btn" onclick="voltarCanteiro()">Voltar às quadras</button>
     </div>
+  </div>
+</section>
+
+<!-- ============ HORTO: MOVIMENTAÇÃO DE MUDAS (entradas/saídas) ============ -->
+<section class="page" id="page-hmov">
+  <div class="sticky-lev">
+    <div>
+      <div class="sl-rua" id="hm-nome">Movimentar mudas</div>
+      <div class="sl-sub" id="hm-sub">—</div>
+    </div>
+    <div class="sl-badge" id="hm-badge">Horto</div>
+  </div>
+
+  <div class="card">
+    <div class="action-title" style="margin-bottom:8px">Nova movimentação</div>
+
+    <label>Tipo</label>
+    <div class="chips" id="hm-tipo">
+      <span class="chip on-green" data-v="entrada" onclick="hmPickTipo(this)">↑ Entrada</span>
+      <span class="chip" data-v="saida" onclick="hmPickTipo(this)">↓ Saída</span>
+    </div>
+
+    <label>Situação</label>
+    <div class="chips" id="hm-status">
+      <span class="chip on-green" data-v="realizado" onclick="hmPickStatus(this)">Realizada</span>
+      <span class="chip" data-v="previsto" onclick="hmPickStatus(this)">Prevista</span>
+    </div>
+    <div class="page-sub" style="margin-top:4px">Realizada muda o estoque agora. Prevista é só planejamento.</div>
+
+    <label>Espécie do inventário (desta quadra)</label>
+    <select id="hm-item" onchange="hmEstoqueHint()"></select>
+    <div id="hm-estoque" class="page-sub" style="margin-top:6px"></div>
+
+    <label>Quantidade de mudas</label>
+    <input type="number" id="hm-qtd" inputmode="numeric" step="1" placeholder="0">
+
+    <label id="hm-data-lbl">Data</label>
+    <input type="date" id="hm-data">
+
+    <label>Motivo</label>
+    <select id="hm-motivo"></select>
+
+    <label>Observações</label><textarea id="hm-obs" placeholder="Opcional"></textarea>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="salvarMovMobile()">Registrar movimentação</button>
+    </div>
+  </div>
+
+  <div class="action-title" style="margin:16px 0 8px">Movimentações recentes</div>
+  <div id="hm-lista"></div>
+
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="voltarQuadraDoMov()">Voltar à quadra</button>
   </div>
 </section>
 

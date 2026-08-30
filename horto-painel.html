@@ -66,9 +66,66 @@
   .brow { font-size: 12.5px; }
   .brow .bl { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
   .brow .bn { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brow .bsub { font-weight: 500; color: var(--text-secondary); font-size: 11px; font-variant-numeric: tabular-nums; }
   .brow .bv { color: var(--text-secondary); flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .track { height: 8px; background: var(--trilha); border-radius: 5px; overflow: hidden; }
   .track > span { display: block; height: 100%; border-radius: 5px; }
+
+  /* ── CROQUI ── */
+  .g-line { stroke: #EAEFF7; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .g-line.m5 { stroke: #DCE5F2; }
+  .cant-rect { fill: #fff; stroke: var(--accent-dark); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .quad { stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: move; }
+  .quad.sel { stroke: var(--warning); stroke-width: 2.5; }
+  .quad-label { fill: var(--text-primary); font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+  .quad-sub { fill: var(--text-secondary); text-anchor: middle; dominant-baseline: middle; }
+  .ruler-txt { fill: var(--text-muted); text-anchor: middle; dominant-baseline: middle; }
+  .handle { fill: #fff; stroke: var(--warning); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: nwse-resize; }
+  .ghost { fill: rgba(41,78,152,.10); stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  .dim-txt { fill: var(--accent-dark); font-weight: 700; text-anchor: middle; }
+  .croq-grid { display: grid; grid-template-columns: 1fr 268px; gap: 16px; align-items: start; }
+  @media (max-width: 980px) { .croq-grid { grid-template-columns: 1fr; } }
+  .croq-stage { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 10px; }
+  svg.cstage { width: 100%; height: auto; display: block; background: #FBFCFE; border: 1px solid var(--border); border-radius: 10px; touch-action: none; }
+  .seg2 { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg2 button { border: 0; background: #fff; padding: 8px 11px; font-size: 12.5px; cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+  .seg2 button.on { background: var(--accent); color: #fff; }
+  .inp2 { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; font-size: 13px; background: var(--surface); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .cql { display: block; font-size: 11.5px; color: var(--text-secondary); margin: 8px 0 3px; }
+  .cq-row2 { display: flex; gap: 8px; } .cq-row2 > div { flex: 1; }
+  .legend { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-secondary); margin-top: 10px; padding: 0 4px; }
+  .legend .bar { height: 10px; flex: 1; border-radius: 5px; background: linear-gradient(90deg, #E7EDF9, #294E98); }
+  .cq-leg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; padding: 0 4px; }
+  .leg-esp { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .leg-esp .sw, .cq-kv .sw { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
+  .cq-kv { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; padding: 5px 0; border-top: 1px solid var(--border); margin-top: 4px; }
+  .cq-kv b { display: flex; align-items: center; gap: 6px; }
+  .cq-hint { font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .cq-sp { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; padding: 5px 0; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .croq-status { font-size: 11.5px; color: var(--text-muted); }
+  .croq-status.ok { color: var(--success); } .croq-status.err { color: var(--danger); } .croq-status.pend { color: var(--warning); }
+  svg.cstage text { pointer-events: none; }
+  .cmap { stroke: var(--accent-dark); stroke-width: 2; vector-effect: non-scaling-stroke; cursor: move; }
+  .cmap.sel { stroke: var(--warning); stroke-width: 3; }
+  .cmap-title, .cmap-num, .cmap-sub, .qmini-l { text-anchor: middle; dominant-baseline: middle; }
+  .cmap-title { font-weight: 700; } .cmap-num { font-weight: 800; } .qmini-l { font-weight: 600; }
+  .qmini { stroke: var(--accent); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+
+  /* ── MOVIMENTAÇÕES ── */
+  .mvb { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .mvb.ent { background: #E4F1EA; color: #166B43; }
+  .mvb.sai { background: #F7EDDD; color: #8A5A1B; }
+  .mvb.real { background: var(--accent-light); color: var(--accent-dark); }
+  .mvb.prev { background: #fff; border: 1px dashed var(--border); color: var(--text-secondary); }
+  .num.pos { color: var(--success); } .num.neg { color: var(--danger); }
+  .mv-form { max-width: 640px; }
+  .mv-form label { display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); margin: 12px 0 5px; }
+  .mv-form input, .mv-form select, .mv-form textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 14px; background: var(--surface); color: var(--text-primary); font-family: inherit; }
+  .mv-form textarea { resize: vertical; }
+  .mv-form .view-h h2 { font-size: 17px; }
+  .mv-hint { font-size: 12.5px; color: var(--text-secondary); margin: 8px 0 2px; min-height: 16px; }
+  .mv-hint.new { color: var(--warning); }
 
   .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -172,13 +229,18 @@ const SUPABASE_URL = 'https://bsgkloaziukpjjzxxeja.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzZ2tsb2F6aXVrcGpqenh4ZWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTU4OTIsImV4cCI6MjA5OTczMTg5Mn0.Nbb_1X0soL35nFnbBMJO0lkyqlcfHq-o_AYD5hys90k';
 const FOTOS_BUCKET = 'fotos-campo';
 const PORTES = { pequenininha: 'Pequenininha', pequeno: 'Pequeno', medio: 'Médio', grande: 'Grande', arborizacao: 'Arborização' };
+const PORTE_FAIXA = { pequenininha: '0 – 15 cm', pequeno: '15 – 35 cm', medio: '35 – 100 cm', grande: '1,0 – 1,8 m', arborizacao: '1,8 – 2,0 m' };
 const PORTE_COR = { pequenininha: '#A9C1E9', pequeno: '#7E9EDB', medio: '#5680D0', grande: '#294E98', arborizacao: '#1E8659' };
 const FITO = { saudavel: 'Saudável', praga: 'Praga', doenca: 'Doença', recuperacao: 'Em recuperação', morta: 'Morta / descarte' };
+const MOV_MOTIVOS = {
+  entrada: { producao: 'Produção própria', compra: 'Compra', doacao_receb: 'Doação recebida', transf_in: 'Transferência (entrada)' },
+  saida: { plantio: 'Plantio / arborização', doacao: 'Doação', descarte: 'Morte / descarte', transf_out: 'Transferência (saída)' }
+};
 const FITO_COR = { saudavel: '#1E8659', praga: '#B07222', doenca: '#C0392F', recuperacao: '#5680D0', morta: '#7A1F17' };
 const COR = { p: '#7E9EDB', m: '#5680D0', g: '#294E98', nat: '#1E8659', exo: '#B07222' };
 
 let sb = null, session = null, userEmail = null, papel = null, modoAberto = false;
-let CANT = [], QUAD = [], ITENS = [], CAT = [];
+let CANT = [], QUAD = [], ITENS = [], CAT = [], MOV = [];
 let FOTOS = { canteiro: {}, quadra: {}, item: {} };
 let navAtual = 'dash';
 let qById = {}, cById = {};
@@ -267,6 +329,8 @@ async function carregarTudo() {
       sbSelect('especies_catalogo', 'select=*&ativo=eq.true&order=nome_popular.asc').then(r => r || [])
     ]);
     CANT = c; QUAD = q; ITENS = i; CAT = cat;
+    try { MOV = await sbSelect('horto_movimentos', 'select=*&order=data.desc,criado_em.desc').then(r => r || []); }
+    catch (e) { MOV = []; /* tabela ainda não criada — rode horto_movimentos.sql */ }
     [FOTOS.canteiro, FOTOS.quadra, FOTOS.item] = await Promise.all([
       carregarFotos('horto_canteiro', c.map(x => x.id_canteiro)),
       carregarFotos('horto_quadra', q.map(x => x.id_quadra)),
@@ -303,9 +367,12 @@ function resumoEspecies() {
 /* ── navegação ── */
 const NAV = [
   ['dash', 'Dashboard', '<path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"/>'],
+  ['mapa', 'Mapa do Horto', '<path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3z"/><path d="M9 3v15M15 6v15"/>'],
   ['canteiros', 'Canteiros', '<rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/>'],
   ['quadras', 'Quadras', '<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>'],
+  ['croqui', 'Croqui', '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M9 3v18"/>'],
   ['itens', 'Inventário', '<path d="M4 6h16M4 12h16M4 18h16"/>'],
+  ['movimentos', 'Movimentações', '<path d="M8 3v18M8 3 4 7M8 3l4 4M16 21V3M16 21l-4-4M16 21l4-4"/>'],
   ['identificar', 'Identificar', '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'],
   ['especies', 'Espécies', '<path d="M12 22c0-6 3-9 8-10-1 6-4 9-8 10zM12 22c0-5-3-7.5-7-8.5 1 5 3.5 7.5 7 8.5z"/>'],
   ['relatorios', 'Relatórios', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>']
@@ -315,7 +382,7 @@ function montarNav() {
     `<button class="navb ${id === navAtual ? 'on' : ''}" data-n="${id}" onclick="irPara('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg>${lbl}</button>`).join('');
 }
 function irPara(v) { navAtual = v; document.querySelectorAll('.navb').forEach(b => b.classList.toggle('on', b.dataset.n === v)); render(); }
-function render() { ({ dash: renderDash, canteiros: renderCanteiros, quadras: renderQuadras, itens: renderItens, identificar: renderIdent, especies: renderEspecies, relatorios: renderRelatorios }[navAtual] || renderDash)(); }
+function render() { ({ dash: renderDash, mapa: renderMapa, canteiros: renderCanteiros, quadras: renderQuadras, croqui: renderCroqui, itens: renderItens, movimentos: renderMov, identificar: renderIdent, especies: renderEspecies, relatorios: renderRelatorios }[navAtual] || renderDash)(); }
 
 /* ── componentes ── */
 function tabela(headers, rows, vazio) {
@@ -326,7 +393,7 @@ function tabela(headers, rows, vazio) {
 const N = v => ({ n: true, h: v });
 function bars(data, cor) {
   const max = Math.max(1, ...data.map(d => d.value));
-  return `<div class="bars">${data.map(d => `<div class="brow"><div class="bl"><span class="bn">${esc(d.label)}</span><span class="bv">${d.value}</span></div><div class="track"><span style="width:${Math.round(d.value / max * 100)}%;background:${d.cor || cor}"></span></div></div>`).join('') || '<div class="empty">Sem dados.</div>'}</div>`;
+  return `<div class="bars">${data.map(d => `<div class="brow"><div class="bl"><span class="bn">${esc(d.label)}${d.sub ? ` <span class="bsub">${esc(d.sub)}</span>` : ''}</span><span class="bv">${d.value}</span></div><div class="track"><span style="width:${Math.round(d.value / max * 100)}%;background:${d.cor || cor}"></span></div></div>`).join('') || '<div class="empty">Sem dados.</div>'}</div>`;
 }
 
 /* ── DASHBOARD ── */
@@ -356,7 +423,7 @@ function renderDash() {
     </div>
     <div class="cards2">
       <div>
-        <div class="sec"><h3>Mudas por porte</h3>${bars(Object.keys(PORTES).map(k => ({ label: PORTES[k], value: porte[k], cor: PORTE_COR[k] })))}</div>
+        <div class="sec"><h3>Mudas por porte</h3>${bars(Object.keys(PORTES).map(k => ({ label: PORTES[k], sub: PORTE_FAIXA[k], value: porte[k], cor: PORTE_COR[k] })))}</div>
         <div class="sec"><h3>Estado fitossanitário</h3>${bars(Object.keys(FITO).map(k => ({ label: FITO[k], value: fito[k], cor: FITO_COR[k] })).concat(semFito ? [{ label: 'Sem informação', value: semFito, cor: '#C9D2E0' }] : []))}</div>
         <div class="sec"><h3>Origem das mudas</h3>${bars([
           { label: 'Nativa', value: orig.nativa, cor: COR.nat },
@@ -420,7 +487,7 @@ function renderItens() {
   $('content').innerHTML = `
     <div class="view-h"><h2>Inventário (itens)</h2><div class="tools">
       <select id="f-cant2" class="inp" onchange="tblItens()"><option value="">Todos os canteiros</option>${ops}</select>
-      <select id="f-porte" class="inp" onchange="tblItens()"><option value="">Todos os portes</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+      <select id="f-porte" class="inp" onchange="tblItens()"><option value="">Todos os portes</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}">${l} (${PORTE_FAIXA[v]})</option>`).join('')}</select>
       <input id="q-item" class="inp" placeholder="🔍 buscar espécie" oninput="tblItens()">
       ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novoItem()">+ Item</button>' : ''}
       <button class="btn btn-sm" onclick="exportItens()">⬇ CSV</button>
@@ -563,6 +630,590 @@ function exportEspecies() {
   const L = [['Nome popular', 'Nome científico', 'Classificação', 'Origem', 'Fruto', 'Ornamental', 'Tipo', 'Floração', 'Copa', 'Persistência', 'Crescimento', 'Mudas no inventário']];
   CAT.forEach(c => L.push([c.nome_popular, c.nome_cientifico, c.classificacao, c.origem, c.fruto, c.ornamental === true ? 'Sim' : c.ornamental === false ? 'Não' : '', c.tipo, c.floracao, c.tipo_copa, c.persistencia, c.crescimento, mp[(c.nome_popular || '').toLowerCase()] || 0]));
   baixarCSV('catalogo_especies.csv', L);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CROQUI — planta do canteiro (mapa do inventário)
+   Geometria (m) em horto_canteiros.croqui:
+     { largura_m, comprimento_m, quadras:{ <id_quadra>:{x,y,w,h} } }
+   Mudas e espécie dominante vêm do inventário (ITENS) ao vivo.
+   ══════════════════════════════════════════════════════════ */
+const CQ_SNAP = 0.25, CQ_MARG = 1.2, CQNS = 'http://www.w3.org/2000/svg';
+const CQ_PALETA = ['#294E98','#1E8659','#B07222','#C0392F','#5680D0','#2C5D9E','#7A1F17','#7E9EDB','#A9C1E9','#6B7280'];
+let croq = { cantId: null, sel: null, ferr: 'selecionar', cor: 'especie' };
+let cqDrag = null, cqSaveTimer = null;
+const cqSnap = v => Math.round(v / CQ_SNAP) * CQ_SNAP;
+const cqClamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const cqRound = v => Math.round(v * 100) / 100;
+
+function croqData(c) {
+  if (!c.croqui || typeof c.croqui !== 'object') c.croqui = {};
+  if (c.croqui.largura_m == null) c.croqui.largura_m = 10;
+  if (c.croqui.comprimento_m == null) c.croqui.comprimento_m = 6;
+  if (!c.croqui.quadras) c.croqui.quadras = {};
+  return c.croqui;
+}
+function _rgb(cor) { if (cor[0] === '#') { const n = parseInt(cor.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; } const m = cor.match(/\d+/g); return m ? m.slice(0, 3).map(Number) : [255, 255, 255]; }
+const cqTexto = cor => { const [r, g, b] = _rgb(cor); return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#1A2233' : '#fff'; };
+
+function cqEspCanteiro(c) {
+  const m = {};
+  ITENS.forEach(it => { if (it._c && it._c.id_canteiro === c.id_canteiro) { const n = it.especie_texto || '(sem nome)'; m[n] = (m[n] || 0) + (+it.quantidade || 0); } });
+  return Object.entries(m).sort((a, b) => b[1] - a[1]);
+}
+function cqCorMap(c) { const map = {}; cqEspCanteiro(c).forEach(([n], i) => map[n] = CQ_PALETA[i % CQ_PALETA.length]); return map; }
+function cqDominante(idq) {
+  const m = {}; ITENS.forEach(it => { if (it.id_quadra === idq) { const n = it.especie_texto || '(sem nome)'; m[n] = (m[n] || 0) + (+it.quantidade || 0); } });
+  const a = Object.entries(m).sort((x, y) => y[1] - x[1]); return a.length ? a[0][0] : null;
+}
+function cqCorMudas(c, mudas) {
+  const arr = QUAD.filter(q => q.id_canteiro === c.id_canteiro).map(q => q._mudas || 0);
+  const max = Math.max(1, ...arr); const t = (mudas || 0) / max;
+  const A = [231, 237, 249], B = [41, 78, 152]; const k = A.map((v, i) => Math.round(v + (B[i] - v) * t));
+  return `rgb(${k[0]},${k[1]},${k[2]})`;
+}
+function cqFill(c, q, corMap) { if (croq.cor === 'quantidade') return cqCorMudas(c, q._mudas); const d = cqDominante(q.id_quadra); return d ? corMap[d] : '#EEF1F6'; }
+
+function renderCroqui() {
+  if (!CANT.length) { $('content').innerHTML = `<div class="view-h"><h2>Croqui do canteiro</h2></div><div class="sec"><div class="empty">Cadastre um canteiro primeiro.</div></div>`; return; }
+  if (!croq.cantId || !cById[croq.cantId]) croq.cantId = CANT[0].id_canteiro;
+  const c = cById[croq.cantId]; croqData(c); const editavel = pode();
+  const ops = CANT.map(x => `<option value="${x.id_canteiro}" ${x.id_canteiro === croq.cantId ? 'selected' : ''}>${esc(x.nome || x.codigo || 'Canteiro')}</option>`).join('');
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Croqui do canteiro</h2><div class="tools">
+      <select class="inp" onchange="croqSelCant(this.value)">${ops}</select>
+      <div class="seg2"><button class="${croq.cor === 'especie' ? 'on' : ''}" onclick="croqSetCor('especie')">Espécie</button><button class="${croq.cor === 'quantidade' ? 'on' : ''}" onclick="croqSetCor('quantidade')">Quantidade</button></div>
+      ${editavel ? `<div class="seg2"><button class="${croq.ferr === 'selecionar' ? 'on' : ''}" onclick="croqSetFerr('selecionar')">👆 Selecionar</button><button class="${croq.ferr === 'desenhar' ? 'on' : ''}" onclick="croqSetFerr('desenhar')">✏️ Desenhar</button></div>` : ''}
+      <span class="croq-status" id="croq-status"></span>
+      <button class="btn btn-sm" onclick="croqPNG()">⬇ PNG</button>
+    </div></div>
+    <div class="croq-grid">
+      <div class="croq-stage"><svg class="cstage" id="cstage" xmlns="${CQNS}"></svg>
+        <div id="cq-legenda"></div>
+      </div>
+      <div class="croq-side">
+        <div class="sec"><h3>Canteiro</h3>
+          <div class="cq-row2">
+            <div><label class="cql">Largura (m)</label><input class="inp2" id="cq-larg" type="number" step="0.5" min="1" value="${c.croqui.largura_m}" ${editavel ? '' : 'disabled'} oninput="croqDim()"></div>
+            <div><label class="cql">Comprimento (m)</label><input class="inp2" id="cq-comp" type="number" step="0.5" min="1" value="${c.croqui.comprimento_m}" ${editavel ? '' : 'disabled'} oninput="croqDim()"></div>
+          </div>
+          ${editavel ? `<div class="cq-hint" style="margin-top:8px">Use <b>✏️ Desenhar</b> e arraste sobre o croqui para criar quadras, ou posicione as já cadastradas abaixo.</div>` : ''}
+        </div>
+        <div class="sec" id="cq-insp" style="display:none"></div>
+        <div class="sec" id="cq-sempos" style="display:none"></div>
+      </div>
+    </div>`;
+  cqAttach(c); cqDesenhar(c); cqLegenda(c); cqInspetor(c); cqSemPos(c);
+}
+
+function cqLegenda(c) {
+  const box = $('cq-legenda'); if (!box) return;
+  if (croq.cor === 'quantidade') { box.innerHTML = `<div class="legend"><span>Menos</span><div class="bar"></div><span>Mais mudas</span></div>`; return; }
+  const arr = cqEspCanteiro(c).slice(0, 12); const map = cqCorMap(c);
+  box.innerHTML = arr.length
+    ? `<div class="cq-leg">` + arr.map(([n, t]) => `<span class="leg-esp"><span class="sw" style="background:${map[n]}"></span>${esc(n)} <b>${t}</b></span>`).join('') + `</div>`
+    : `<div class="legend"><span style="color:var(--text-muted)">Sem inventário para colorir ainda — as quadras ficam cinza.</span></div>`;
+}
+
+/* desenho no SVG (metros direto no viewBox) */
+function cqVB(c) { const W = c.croqui.largura_m, H = c.croqui.comprimento_m; return { x: -CQ_MARG, y: -CQ_MARG, w: W + CQ_MARG * 2, h: H + CQ_MARG * 2, W, H }; }
+function cqFS(c) { return Math.max(0.28, Math.min(0.55, cqVB(c).W / 28)); }
+function cqNode(tag, a, k) { const e = document.createElementNS(CQNS, tag); for (const x in a) e.setAttribute(x, a[x]); (k || []).forEach(ch => e.appendChild(ch)); return e; }
+function cqTxt(x, y, s, cls, size, fill) { const t = cqNode('text', { x, y, class: cls, 'font-size': size }); if (fill) t.setAttribute('fill', fill); t.textContent = s; return t; }
+function cqPonto(svg, evt) { const p = svg.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY; const m = p.matrixTransform(svg.getScreenCTM().inverse()); return { x: m.x, y: m.y }; }
+
+function cqDesenhar(c) {
+  const svg = $('cstage'); if (!svg) return; const vb = cqVB(c);
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  svg.setAttribute('height', Math.round(540 * vb.h / vb.w));
+  svg.style.cursor = croq.ferr === 'desenhar' && pode() ? 'crosshair' : 'default';
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const fs = cqFS(c), map = cqCorMap(c);
+  for (let x = 0; x <= vb.W + .001; x++) svg.appendChild(cqNode('line', { class: 'g-line' + (x % 5 === 0 ? ' m5' : ''), x1: x, y1: 0, x2: x, y2: vb.H }));
+  for (let y = 0; y <= vb.H + .001; y++) svg.appendChild(cqNode('line', { class: 'g-line' + (y % 5 === 0 ? ' m5' : ''), x1: 0, y1: y, x2: vb.W, y2: y }));
+  const rs = fs * 0.8;
+  for (let x = 0; x <= vb.W + .001; x += (vb.W > 20 ? 5 : 1)) svg.appendChild(cqTxt(x, -0.45, x + '', 'ruler-txt', rs));
+  for (let y = 0; y <= vb.H + .001; y += (vb.H > 20 ? 5 : 1)) svg.appendChild(cqTxt(-0.55, y, y + '', 'ruler-txt', rs));
+  svg.appendChild(cqNode('rect', { class: 'cant-rect', x: 0, y: 0, width: vb.W, height: vb.H }));
+  QUAD.filter(q => q.id_canteiro === c.id_canteiro && c.croqui.quadras[q.id_quadra]).forEach(q => {
+    const g = c.croqui.quadras[q.id_quadra]; const fill = cqFill(c, q, map); const tc = cqTexto(fill);
+    const r = cqNode('rect', { class: 'quad' + (q.id_quadra === croq.sel ? ' sel' : ''), x: g.x, y: g.y, width: g.w, height: g.h, rx: 0.05, fill, 'data-id': q.id_quadra });
+    const dom = cqDominante(q.id_quadra);
+    const tit = cqNode('title', {}); tit.textContent = (q.nome || q.codigo || '') + (dom ? ' · ' + dom : '') + ' · ' + (q._mudas || 0) + ' mudas'; r.appendChild(tit);
+    svg.appendChild(r);
+    const cx = g.x + g.w / 2, cy = g.y + g.h / 2;
+    svg.appendChild(cqTxt(cx, cy - fs * 0.35, q.nome || q.codigo || '—', 'quad-label', fs, tc));
+    svg.appendChild(cqTxt(cx, cy + fs * 0.55, (q._mudas || 0) + ' mudas', 'quad-sub', fs * 0.72, tc));
+  });
+  const sel = croq.sel && c.croqui.quadras[croq.sel];
+  if (sel && croq.ferr === 'selecionar' && pode()) { const hs = Math.max(0.18, fs * 0.5); svg.appendChild(cqNode('rect', { class: 'handle', x: sel.x + sel.w - hs / 2, y: sel.y + sel.h - hs / 2, width: hs, height: hs, 'data-handle': 'br' })); }
+}
+function cqGhost(svg, c, d) {
+  const x = Math.min(d.x0, d.x1), y = Math.min(d.y0, d.y1), w = Math.abs(d.x1 - d.x0), h = Math.abs(d.y1 - d.y0);
+  svg.appendChild(cqNode('rect', { class: 'ghost', x, y, width: w, height: h }));
+  const fs = cqFS(c); if (w >= CQ_SNAP || h >= CQ_SNAP) svg.appendChild(cqTxt(x + w / 2, y - fs * 0.3, `${cqRound(w)} × ${cqRound(h)} m`, 'dim-txt', fs * 0.8));
+}
+
+function cqAttach(c) {
+  const svg = $('cstage'); if (!svg) return;
+  const W = () => c.croqui.largura_m, H = () => c.croqui.comprimento_m;
+  svg.onpointerdown = e => {
+    if (!pode()) return;
+    const m = cqPonto(svg, e), t = e.target;
+    if (croq.ferr === 'selecionar') {
+      if (t.dataset && t.dataset.handle === 'br' && croq.sel) { cqDrag = { tipo: 'resize', id: croq.sel }; svg.setPointerCapture(e.pointerId); return; }
+      if (t.dataset && t.dataset.id) { croq.sel = t.dataset.id; const g = c.croqui.quadras[croq.sel]; cqDrag = { tipo: 'mover', id: croq.sel, dx: m.x - g.x, dy: m.y - g.y }; svg.setPointerCapture(e.pointerId); cqDesenhar(c); cqInspetor(c); return; }
+      croq.sel = null; cqDesenhar(c); cqInspetor(c); return;
+    }
+    const x0 = cqClamp(cqSnap(m.x), 0, W()), y0 = cqClamp(cqSnap(m.y), 0, H());
+    cqDrag = { tipo: 'novo', x0, y0, x1: x0, y1: y0 }; svg.setPointerCapture(e.pointerId);
+  };
+  svg.onpointermove = e => {
+    if (!cqDrag) return; const m = cqPonto(svg, e);
+    if (cqDrag.tipo === 'novo') { cqDrag.x1 = cqClamp(cqSnap(m.x), 0, W()); cqDrag.y1 = cqClamp(cqSnap(m.y), 0, H()); cqDesenhar(c); cqGhost(svg, c, cqDrag); }
+    else if (cqDrag.tipo === 'mover') { const g = c.croqui.quadras[cqDrag.id]; g.x = cqClamp(cqSnap(m.x - cqDrag.dx), 0, W() - g.w); g.y = cqClamp(cqSnap(m.y - cqDrag.dy), 0, H() - g.h); cqDesenhar(c); }
+    else if (cqDrag.tipo === 'resize') { const g = c.croqui.quadras[cqDrag.id]; g.w = cqClamp(cqSnap(m.x - g.x), CQ_SNAP, W() - g.x); g.h = cqClamp(cqSnap(m.y - g.y), CQ_SNAP, H() - g.y); cqDesenhar(c); }
+  };
+  svg.onpointerup = () => {
+    if (!cqDrag) return;
+    if (cqDrag.tipo === 'novo') {
+      const x = Math.min(cqDrag.x0, cqDrag.x1), y = Math.min(cqDrag.y0, cqDrag.y1), w = Math.abs(cqDrag.x1 - cqDrag.x0), h = Math.abs(cqDrag.y1 - cqDrag.y0);
+      cqDrag = null; if (w >= CQ_SNAP && h >= CQ_SNAP) cqCriarQuadra(c, { x, y, w, h }); else cqDesenhar(c); return;
+    }
+    cqDrag = null; cqInspetor(c); cqAgendarSave(c);
+  };
+}
+
+function cqInspetor(c) {
+  const box = $('cq-insp'); if (!box) return;
+  const q = croq.sel && qById[croq.sel];
+  if (!q || q.id_canteiro !== c.id_canteiro || !c.croqui.quadras[q.id_quadra]) { box.style.display = 'none'; return; }
+  const g = c.croqui.quadras[q.id_quadra], dom = cqDominante(q.id_quadra), map = cqCorMap(c), editavel = pode();
+  box.style.display = 'block';
+  box.innerHTML = `<h3>Quadra selecionada</h3>
+    <label class="cql">Código / nome</label><input class="inp2" id="cq-cod" value="${esc(q.nome || q.codigo || '')}" ${editavel ? '' : 'disabled'}>
+    <div class="cq-row2"><div><label class="cql">X (m)</label><input class="inp2" id="cq-x" type="number" step="0.25" value="${g.x}" ${editavel ? '' : 'disabled'}></div><div><label class="cql">Y (m)</label><input class="inp2" id="cq-y" type="number" step="0.25" value="${g.y}" ${editavel ? '' : 'disabled'}></div></div>
+    <div class="cq-row2"><div><label class="cql">Largura (m)</label><input class="inp2" id="cq-w" type="number" step="0.25" value="${g.w}" ${editavel ? '' : 'disabled'}></div><div><label class="cql">Comprim. (m)</label><input class="inp2" id="cq-h" type="number" step="0.25" value="${g.h}" ${editavel ? '' : 'disabled'}></div></div>
+    <div class="cq-kv"><span>Mudas (inventário)</span><b>${q._mudas || 0}</b></div>
+    <div class="cq-kv"><span>Espécie dominante</span><b>${dom ? `<span class="sw" style="background:${map[dom]}"></span> ${esc(dom)}` : '—'}</b></div>
+    <div class="cq-kv"><span>Área</span><b>${cqRound(g.w * g.h)} m²</b></div>
+    ${editavel ? `<div class="btn-row"><button class="btn btn-primary btn-sm" onclick="croqAplicar()">Aplicar cotas</button><button class="btn btn-sm" onclick="croqTirar()">Tirar do croqui</button><button class="btn btn-sm" style="color:var(--danger)" onclick="croqExcluir()">Excluir quadra</button></div>` : ''}`;
+}
+
+function cqSemPos(c) {
+  const box = $('cq-sempos'); if (!box) return;
+  if (!pode()) { box.style.display = 'none'; return; }
+  const sem = QUAD.filter(q => q.id_canteiro === c.id_canteiro && !c.croqui.quadras[q.id_quadra]);
+  if (!sem.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = `<h3>Quadras sem posição</h3><div class="cq-hint">Já cadastradas, mas ainda não estão no croqui.</div>` +
+    sem.map(q => `<div class="cq-sp"><span>${esc(q.nome || q.codigo || '—')} · ${q._mudas || 0} mudas</span><button class="btn btn-sm" onclick="croqPosicionar('${q.id_quadra}')">posicionar</button></div>`).join('');
+}
+
+/* ── ações do croqui ── */
+function croqSelCant(id) { croq.cantId = id; croq.sel = null; renderCroqui(); }
+function croqSetCor(v) { croq.cor = v; renderCroqui(); }
+function croqSetFerr(v) { croq.ferr = v; renderCroqui(); }
+function cqProxCod(c) { const cods = new Set(QUAD.filter(q => q.id_canteiro === c.id_canteiro).map(q => q.codigo || q.nome || '')); let n = 1; while (cods.has('Q' + n)) n++; return 'Q' + n; }
+
+async function cqCriarQuadra(c, g) {
+  const cod = cqProxCod(c);
+  const d = { id_quadra: uuid(), id_canteiro: c.id_canteiro, codigo: cod, nome: cod, obs: null, criado_em: nowIso(), criado_por: userEmail };
+  QUAD.push(d); computar(); c.croqui.quadras[d.id_quadra] = g; croq.sel = d.id_quadra; croq.ferr = 'selecionar'; renderCroqui();
+  try { await sbInsert('horto_quadras', d); } catch (e) { showToast('Erro ao criar quadra: ' + e.message, 'error'); }
+  cqAgendarSave(c);
+}
+function croqPosicionar(idq) {
+  const c = cById[croq.cantId]; const g = { x: 0.5, y: 0.5, w: Math.min(3, c.croqui.largura_m - 1), h: Math.min(2, c.croqui.comprimento_m - 1) };
+  c.croqui.quadras[idq] = g; croq.sel = idq; croq.ferr = 'selecionar'; renderCroqui(); cqAgendarSave(c);
+}
+function croqAplicar() {
+  const c = cById[croq.cantId], q = qById[croq.sel]; if (!q) return; const g = c.croqui.quadras[q.id_quadra]; if (!g) return;
+  const novoCod = ($('cq-cod').value || '').trim();
+  g.x = cqClamp(cqSnap(+$('cq-x').value || 0), 0, c.croqui.largura_m); g.y = cqClamp(cqSnap(+$('cq-y').value || 0), 0, c.croqui.comprimento_m);
+  g.w = cqClamp(cqSnap(+$('cq-w').value || 1), CQ_SNAP, c.croqui.largura_m - g.x); g.h = cqClamp(cqSnap(+$('cq-h').value || 1), CQ_SNAP, c.croqui.comprimento_m - g.y);
+  if (novoCod && novoCod !== (q.nome || q.codigo)) { q.codigo = novoCod; q.nome = novoCod; sbUpdate('horto_quadras', 'id_quadra=eq.' + q.id_quadra, { codigo: novoCod, nome: novoCod }).catch(e => showToast('Erro: ' + e.message, 'error')); }
+  renderCroqui(); cqAgendarSave(c);
+}
+function croqTirar() { const c = cById[croq.cantId]; if (!croq.sel) return; delete c.croqui.quadras[croq.sel]; croq.sel = null; renderCroqui(); cqAgendarSave(c); }
+async function croqExcluir() {
+  const c = cById[croq.cantId], q = qById[croq.sel]; if (!q) return;
+  if (!confirm(`Excluir a quadra "${q.nome || q.codigo}"?\n\nApaga também seus itens (${q._mudas || 0} muda(s)).`)) return;
+  try {
+    await sbDelete('horto_quadras', 'id_quadra=eq.' + q.id_quadra);
+    ITENS = ITENS.filter(x => x.id_quadra !== q.id_quadra); QUAD = QUAD.filter(x => x.id_quadra !== q.id_quadra);
+    delete c.croqui.quadras[q.id_quadra]; croq.sel = null; computar(); renderCroqui(); cqAgendarSave(c); showToast('Quadra excluída.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function croqDim() {
+  const c = cById[croq.cantId]; c.croqui.largura_m = Math.max(1, +$('cq-larg').value || 1); c.croqui.comprimento_m = Math.max(1, +$('cq-comp').value || 1);
+  Object.values(c.croqui.quadras).forEach(g => { g.x = cqClamp(g.x, 0, c.croqui.largura_m - CQ_SNAP); g.y = cqClamp(g.y, 0, c.croqui.comprimento_m - CQ_SNAP); g.w = Math.min(g.w, c.croqui.largura_m - g.x); g.h = Math.min(g.h, c.croqui.comprimento_m - g.y); });
+  cqDesenhar(c); cqAgendarSave(c);
+}
+
+function cqAgendarSave(c) { const s = $('croq-status'); if (s) { s.textContent = 'salvando…'; s.className = 'croq-status pend'; } clearTimeout(cqSaveTimer); cqSaveTimer = setTimeout(() => cqSalvar(c), 700); }
+async function cqSalvar(c) {
+  try { await sbUpdate('horto_canteiros', 'id_canteiro=eq.' + c.id_canteiro, { croqui: c.croqui }); const s = $('croq-status'); if (s) { s.textContent = 'salvo ✓'; s.className = 'croq-status ok'; } }
+  catch (e) { const s = $('croq-status'); if (s) { s.textContent = 'não salvo'; s.className = 'croq-status err'; } showToast('Croqui não salvo: ' + e.message + (/croqui|column|schema|PGRST/i.test(e.message) ? ' — rode horto_croqui.sql no Supabase' : ''), 'error'); }
+}
+
+function croqPNG() {
+  const c = cById[croq.cantId], svg = $('cstage'); if (!svg) return;
+  const clone = svg.cloneNode(true); clone.setAttribute('xmlns', CQNS);
+  const vb = cqVB(c), sc = 80; clone.setAttribute('width', Math.round(vb.w * sc)); clone.setAttribute('height', Math.round(vb.h * sc));
+  const data = new XMLSerializer().serializeToString(clone); const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = Math.round(vb.w * sc); cv.height = Math.round(vb.h * sc);
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
+    cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = ((c.nome || c.codigo || 'croqui') + '').replace(/\s+/g, '_') + '.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
+  };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+}
+
+/* ══════════════════════════════════════════════════════════
+   MAPA DO HORTO — nível acima do croqui
+   Compõe todos os canteiros num só plano. Cada canteiro é
+   posicionado por croqui.pos={x,y} (m) e dimensionado pelo
+   seu próprio croqui. Totais de mudas vêm do inventário.
+   Botão "Mostrar quadras" abre o detalhamento por quadra.
+   ══════════════════════════════════════════════════════════ */
+const HM_DEF = { W: 8, H: 5 };
+let hmap = { sel: null, quadras: false }, hmDrag = null, hmSaveTimer = null;
+const HM_TXT = '#1A2233', HM_SUB = '#53627C';
+
+function hmDims(c) { const cr = c.croqui; return { W: cr && cr.largura_m ? cr.largura_m : HM_DEF.W, H: cr && cr.comprimento_m ? cr.comprimento_m : HM_DEF.H }; }
+function hmLerp(t) { t = Math.max(0, Math.min(1, t)); const A = [231, 237, 249], B = [41, 78, 152]; const k = A.map((v, i) => Math.round(v + (B[i] - v) * t)); return `rgb(${k[0]},${k[1]},${k[2]})`; }
+function hmCorCant(mudas) { const max = Math.max(1, ...CANT.map(c => c._mudas || 0)); return hmLerp((mudas || 0) / max); }
+function hmCorQuad(mudas) { const max = Math.max(1, ...QUAD.map(q => q._mudas || 0)); return hmLerp((mudas || 0) / max); }
+function hmBBox() {
+  const placed = CANT.filter(c => c.croqui && c.croqui.pos);
+  if (!placed.length) return null;
+  let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  placed.forEach(c => { const p = c.croqui.pos, d = hmDims(c); minx = Math.min(minx, p.x); miny = Math.min(miny, p.y); maxx = Math.max(maxx, p.x + d.W); maxy = Math.max(maxy, p.y + d.H); });
+  return { minx, miny, maxx, maxy };
+}
+function hmProxPos() {
+  const placed = CANT.filter(c => c.croqui && c.croqui.pos);
+  if (!placed.length) return { x: 1, y: 1 };
+  const maxRight = Math.max(...placed.map(c => c.croqui.pos.x + hmDims(c).W));
+  return { x: cqRound(maxRight + 2), y: 1 };
+}
+
+function renderMapa() {
+  if (!CANT.length) { $('content').innerHTML = `<div class="view-h"><h2>Mapa do Horto</h2></div><div class="sec"><div class="empty">Cadastre um canteiro primeiro.</div></div>`; return; }
+  CANT.forEach(c => { if (c.croqui) croqData(c); });
+  const totMudas = CANT.reduce((s, c) => s + (c._mudas || 0), 0);
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Mapa do Horto</h2><div class="tools">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;cursor:pointer"><input type="checkbox" id="hm-quad" ${hmap.quadras ? 'checked' : ''} onchange="hmToggleQuad(this.checked)"> Mostrar quadras</label>
+      <span class="croq-status" id="hm-status"></span>
+      <button class="btn btn-sm" onclick="hmPNG()">⬇ PNG</button>
+    </div></div>
+    <div class="croq-grid">
+      <div class="croq-stage"><svg class="cstage" id="hstage" xmlns="${CQNS}"></svg>
+        <div class="legend"><span>Menos</span><div class="bar"></div><span>Mais mudas</span></div>
+        ${pode() ? '<div class="cq-hint" style="margin-top:8px">Arraste os canteiros para posicioná-los. Duplo-clique abre o croqui do canteiro.</div>' : ''}
+      </div>
+      <div class="croq-side">
+        <div class="sec"><h3>Totais do horto</h3>
+          <div class="cq-kv"><span>Canteiros</span><b>${CANT.length}</b></div>
+          <div class="cq-kv"><span>Quadras</span><b>${QUAD.length}</b></div>
+          <div class="cq-kv"><span>Mudas</span><b>${totMudas.toLocaleString('pt-BR')}</b></div>
+        </div>
+        <div class="sec" id="hm-insp" style="display:none"></div>
+        <div class="sec" id="hm-sempos" style="display:none"></div>
+      </div>
+    </div>`;
+  hmAttach(); hmDesenhar(); hmInspetor(); hmSemPos();
+}
+function hmToggleQuad(v) { hmap.quadras = v; hmDesenhar(); }
+
+function hmDesenhar() {
+  const svg = $('hstage'); if (!svg) return;
+  const bb = hmBBox();
+  if (!bb) { svg.setAttribute('viewBox', '0 0 12 6'); svg.setAttribute('height', 300); while (svg.firstChild) svg.removeChild(svg.firstChild); svg.appendChild(cqTxt(6, 3, 'Nenhum canteiro posicionado — use “posicionar”.', 'ruler-txt', 0.45)); return; }
+  const M = 2, vb = { x: bb.minx - M, y: bb.miny - M, w: (bb.maxx - bb.minx) + 2 * M, h: (bb.maxy - bb.miny) + 2 * M };
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  svg.setAttribute('height', Math.round(560 * vb.h / vb.w));
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const fs = Math.max(0.3, Math.min(0.75, vb.w / 26));
+  CANT.filter(c => c.croqui && c.croqui.pos).forEach(c => {
+    const p = c.croqui.pos, d = hmDims(c), showQ = hmap.quadras;
+    const baseFill = showQ ? '#fff' : hmCorCant(c._mudas), tc = cqTexto(baseFill);
+    const r = cqNode('rect', { class: 'cmap' + (c.id_canteiro === hmap.sel ? ' sel' : ''), x: p.x, y: p.y, width: d.W, height: d.H, rx: 0.15, fill: baseFill, 'data-cid': c.id_canteiro });
+    const tit = cqNode('title', {}); tit.textContent = (c.nome || c.codigo || 'Canteiro') + ' · ' + (c._mudas || 0) + ' mudas · ' + (c._quadras || 0) + ' quadra(s)'; r.appendChild(tit);
+    svg.appendChild(r);
+    svg.appendChild(cqTxt(p.x + d.W / 2, p.y - fs * 0.45, c.nome || c.codigo || 'Canteiro', 'cmap-title', fs * 0.72, HM_TXT));
+    if (showQ) {
+      QUAD.filter(q => q.id_canteiro === c.id_canteiro && c.croqui.quadras && c.croqui.quadras[q.id_quadra]).forEach(q => {
+        const g = c.croqui.quadras[q.id_quadra], f = hmCorQuad(q._mudas), qtc = cqTexto(f);
+        svg.appendChild(cqNode('rect', { class: 'qmini', x: p.x + g.x, y: p.y + g.y, width: g.w, height: g.h, rx: 0.05, fill: f }));
+        const qcx = p.x + g.x + g.w / 2, qcy = p.y + g.y + g.h / 2;
+        svg.appendChild(cqTxt(qcx, qcy - fs * 0.28, q.nome || q.codigo || '', 'qmini-l', fs * 0.48, qtc));
+        svg.appendChild(cqTxt(qcx, qcy + fs * 0.36, (q._mudas || 0) + '', 'qmini-l', fs * 0.42, qtc));
+      });
+      svg.appendChild(cqTxt(p.x + d.W / 2, p.y + d.H - fs * 0.4, 'total ' + (c._mudas || 0) + ' mudas', 'cmap-sub', fs * 0.5, HM_SUB));
+    } else {
+      svg.appendChild(cqTxt(p.x + d.W / 2, p.y + d.H / 2 - fs * 0.15, (c._mudas || 0) + '', 'cmap-num', fs * 1.2, tc));
+      svg.appendChild(cqTxt(p.x + d.W / 2, p.y + d.H / 2 + fs * 0.75, 'mudas', 'cmap-sub', fs * 0.5, tc));
+    }
+  });
+}
+
+function hmAttach() {
+  const svg = $('hstage'); if (!svg) return;
+  svg.onpointerdown = e => {
+    const t = e.target;
+    if (!(t.dataset && t.dataset.cid)) { if (pode()) { hmap.sel = null; hmDesenhar(); hmInspetor(); } return; }
+    hmap.sel = t.dataset.cid; hmDesenhar(); hmInspetor();
+    if (!pode()) return;
+    const c = cById[t.dataset.cid]; croqData(c); const m = cqPonto(svg, e), p = c.croqui.pos;
+    hmDrag = { id: c.id_canteiro, dx: m.x - p.x, dy: m.y - p.y }; svg.setPointerCapture(e.pointerId);
+  };
+  svg.onpointermove = e => {
+    if (!hmDrag) return; const m = cqPonto(svg, e), c = cById[hmDrag.id]; croqData(c);
+    c.croqui.pos.x = Math.max(0, cqSnap(m.x - hmDrag.dx)); c.croqui.pos.y = Math.max(0, cqSnap(m.y - hmDrag.dy)); hmDesenhar();
+  };
+  svg.onpointerup = () => { if (!hmDrag) return; const c = cById[hmDrag.id]; hmDrag = null; hmInspetor(); hmAgendarSave(c); };
+  svg.ondblclick = e => { const t = e.target; if (t.dataset && t.dataset.cid) hmAbrirCroqui(t.dataset.cid); };
+}
+
+function hmInspetor() {
+  const box = $('hm-insp'); if (!box) return; const c = hmap.sel && cById[hmap.sel];
+  if (!c) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = `<h3>${esc(c.nome || c.codigo || 'Canteiro')}</h3>
+    <div class="cq-kv"><span>Mudas (total)</span><b>${c._mudas || 0}</b></div>
+    <div class="cq-kv"><span>Quadras</span><b>${c._quadras || 0}</b></div>
+    <div class="cq-kv"><span>Itens</span><b>${c._itens || 0}</b></div>
+    <div class="cq-kv"><span>Espécies</span><b>${c._especies.size}</b></div>
+    <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="hmAbrirCroqui('${c.id_canteiro}')">Abrir croqui</button>${pode() ? `<button class="btn btn-sm" onclick="hmTirar('${c.id_canteiro}')">Tirar do mapa</button>` : ''}</div>`;
+}
+function hmAbrirCroqui(id) { croq.cantId = id; irPara('croqui'); }
+function hmTirar(id) { const c = cById[id]; if (c.croqui) delete c.croqui.pos; hmap.sel = null; renderMapa(); hmAgendarSave(c); }
+
+function hmSemPos() {
+  const box = $('hm-sempos'); if (!box) return; if (!pode()) { box.style.display = 'none'; return; }
+  const sem = CANT.filter(c => !(c.croqui && c.croqui.pos));
+  if (!sem.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = `<h3>Canteiros sem posição</h3><div class="cq-hint">Coloque no mapa para ver a totalização espacial.</div>` +
+    sem.map(c => `<div class="cq-sp"><span>${esc(c.nome || c.codigo || '—')} · ${c._mudas || 0} mudas</span><button class="btn btn-sm" onclick="hmPosicionar('${c.id_canteiro}')">posicionar</button></div>`).join('');
+}
+function hmPosicionar(id) { const c = cById[id]; croqData(c); c.croqui.pos = hmProxPos(); hmap.sel = id; renderMapa(); hmAgendarSave(c); }
+
+function hmAgendarSave(c) { const s = $('hm-status'); if (s) { s.textContent = 'salvando…'; s.className = 'croq-status pend'; } clearTimeout(hmSaveTimer); hmSaveTimer = setTimeout(() => hmSalvar(c), 700); }
+async function hmSalvar(c) {
+  try { await sbUpdate('horto_canteiros', 'id_canteiro=eq.' + c.id_canteiro, { croqui: c.croqui }); const s = $('hm-status'); if (s) { s.textContent = 'salvo ✓'; s.className = 'croq-status ok'; } }
+  catch (e) { const s = $('hm-status'); if (s) { s.textContent = 'não salvo'; s.className = 'croq-status err'; } showToast('Mapa não salvo: ' + e.message + (/croqui|column|schema|PGRST/i.test(e.message) ? ' — rode horto_croqui.sql no Supabase' : ''), 'error'); }
+}
+function hmPNG() {
+  const svg = $('hstage'); if (!svg) return; const [, , w, h] = svg.getAttribute('viewBox').split(' ').map(Number);
+  const clone = svg.cloneNode(true); clone.setAttribute('xmlns', CQNS); const sc = 80; clone.setAttribute('width', Math.round(w * sc)); clone.setAttribute('height', Math.round(h * sc));
+  const data = new XMLSerializer().serializeToString(clone); const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
+    cv.toBlob(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'mapa_horto.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); });
+  };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+}
+
+/* ══════════════════════════════════════════════════════════
+   MOVIMENTAÇÕES DE MUDAS — entradas/saídas (realizadas e previstas)
+   Lançadas por quadra (via id_item). Realizadas ajustam o estoque
+   (horto_itens.quantidade); previstas entram só na projeção.
+   ══════════════════════════════════════════════════════════ */
+const hojeISO = () => new Date().toISOString().slice(0, 10);
+function fmtData(d) { if (!d) return '—'; const p = ('' + d).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; }
+const movMotivoLabel = mv => (mv.motivo && MOV_MOTIVOS[mv.tipo] && MOV_MOTIVOS[mv.tipo][mv.motivo]) || mv.motivo || '';
+
+function acharItem(id_quadra, especie, porte) {
+  const e = (especie || '').toLowerCase();
+  return ITENS.find(it => it.id_quadra === id_quadra && (it.especie_texto || '').toLowerCase() === e && (it.porte || '') === (porte || ''));
+}
+async function acharOuCriarItem(id_quadra, especie, porte) {
+  let it = acharItem(id_quadra, especie, porte); if (it) return it;
+  const cat = catByNome()[(especie || '').toLowerCase()];
+  const d = { id_item: uuid(), id_quadra, id_especie: cat ? cat.id_especie : null, especie_texto: especie, porte: porte || null, quantidade: 0, estado_fito: null, obs: null, criado_em: nowIso(), criado_por: userEmail };
+  await sbInsert('horto_itens', d); ITENS.push(d); computar(); return d;
+}
+async function ajustarEstoque(it, delta) { it.quantidade = Math.max(0, (+it.quantidade || 0) + delta); await sbUpdate('horto_itens', 'id_item=eq.' + it.id_item, { quantidade: it.quantidade }); computar(); }
+
+/* projeção: previstas por item */
+function movPrevistoPorItem() {
+  const m = {};
+  MOV.forEach(mv => { if (mv.status !== 'previsto' || !mv.id_item) return; const k = mv.id_item; (m[k] = m[k] || { ent: 0, sai: 0 }); const n = +mv.quantidade || 0; if (mv.tipo === 'entrada') m[k].ent += n; else m[k].sai += n; });
+  return m;
+}
+
+function renderMov() {
+  const ops = CANT.map(c => `<option value="${c.id_canteiro}">${esc(c.nome || c.codigo || 'Canteiro')}</option>`).join('');
+  $('content').innerHTML = `
+    <div class="view-h"><h2>Movimentações de mudas</h2><div class="tools">
+      ${pode() ? '<button class="btn btn-primary btn-sm" onclick="novaMov()">+ Movimentação</button>' : ''}
+      <button class="btn btn-sm" onclick="exportMov()">⬇ CSV</button>
+    </div></div>
+    <div class="kpis" id="mv-kpis"></div>
+    <div class="sec"><div class="tools" style="margin-bottom:12px">
+      <select id="mvf-cant" class="inp" onchange="tblMov()"><option value="">Todos os canteiros</option>${ops}</select>
+      <select id="mvf-tipo" class="inp" onchange="tblMov()"><option value="">Entradas e saídas</option><option value="entrada">Só entradas</option><option value="saida">Só saídas</option></select>
+      <select id="mvf-status" class="inp" onchange="tblMov()"><option value="">Realizadas e previstas</option><option value="realizado">Só realizadas</option><option value="previsto">Só previstas</option></select>
+      <input id="mvf-de" type="date" class="inp" title="De" onchange="tblMov()"><input id="mvf-ate" type="date" class="inp" title="Até" onchange="tblMov()">
+      <input id="mvf-q" class="inp" placeholder="🔍 espécie" oninput="tblMov()">
+    </div><div id="mv-tbl"></div></div>
+    <div class="sec"><h3>Projeção de estoque <span style="font-weight:400;color:var(--text-muted);font-size:12px">— estoque atual ± movimentações previstas</span></h3><div id="mv-proj"></div></div>`;
+  tblMov(); tblProj();
+}
+function tblProj() {
+  const prev = movPrevistoPorItem();
+  const rows = Object.keys(prev).map(idItem => {
+    const it = ITENS.find(x => x.id_item === idItem); if (!it) return null;
+    const qd = qById[it.id_quadra], c = qd ? qd._c : null;
+    const atual = +it.quantidade || 0, pe = prev[idItem].ent, ps = prev[idItem].sai, proj = atual + pe - ps;
+    return { loc: (c ? (c.nome || c.codigo || '—') : '—') + (qd ? ' › ' + (qd.nome || qd.codigo || '') : ''), esp: it.especie_texto || '—', porte: PORTES[it.porte] || it.porte || '—', atual, pe, ps, proj };
+  }).filter(Boolean).sort((a, b) => a.proj - b.proj);
+  const trs = rows.map(r => [esc(r.loc), esc(r.esp), esc(r.porte), N(r.atual), N(r.pe ? '+' + r.pe : 0), N(r.ps ? '−' + r.ps : 0), { n: true, h: `<b style="${r.proj < 0 ? 'color:var(--danger)' : ''}">${r.proj.toLocaleString('pt-BR')}</b>` }]);
+  $('mv-proj').innerHTML = tabela([{ t: 'Local' }, { t: 'Espécie' }, { t: 'Porte' }, { t: 'Estoque', n: 1 }, { t: 'Entradas prev.', n: 1 }, { t: 'Saídas prev.', n: 1 }, { t: 'Projetado', n: 1 }], trs, 'Sem movimentações previstas lançadas.');
+}
+
+function movFiltrado() {
+  const fc = $('mvf-cant').value, ft = $('mvf-tipo').value, fst = $('mvf-status').value, de = $('mvf-de').value, ate = $('mvf-ate').value, q = ($('mvf-q').value || '').toLowerCase().trim();
+  return MOV.filter(mv => {
+    if (fc) { const qd = mv.id_quadra ? qById[mv.id_quadra] : null; if (!qd || qd.id_canteiro !== fc) return false; }
+    if (ft && mv.tipo !== ft) return false;
+    if (fst && mv.status !== fst) return false;
+    if (de && ('' + (mv.data || '')) < de) return false;
+    if (ate && ('' + (mv.data || '')) > ate) return false;
+    if (q && !(mv.especie_texto || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function tblMov() {
+  const rows = movFiltrado();
+  let entR = 0, saiR = 0, entP = 0, saiP = 0;
+  rows.forEach(mv => { const n = +mv.quantidade || 0; if (mv.status === 'realizado') { if (mv.tipo === 'entrada') entR += n; else saiR += n; } else { if (mv.tipo === 'entrada') entP += n; else saiP += n; } });
+  const sTile = (num, lbl, cls) => `<div class="tile"><div class="lbl">${lbl}</div><div class="num ${cls || ''}">${(num < 0 ? '−' : '') + Math.abs(num).toLocaleString('pt-BR')}</div></div>`;
+  $('mv-kpis').innerHTML =
+    sTile(entR, 'Entradas realizadas', 'pos') + sTile(saiR, 'Saídas realizadas', 'neg') + sTile(entR - saiR, 'Saldo realizado', (entR - saiR) < 0 ? 'neg' : '') +
+    sTile(entP, 'Entradas previstas') + sTile(saiP, 'Saídas previstas') + sTile(entP - saiP, 'Saldo previsto', (entP - saiP) < 0 ? 'neg' : '');
+  const trs = rows.map(mv => {
+    const qd = mv.id_quadra ? qById[mv.id_quadra] : null, c = qd ? qd._c : null;
+    const loc = (c ? (c.nome || c.codigo || '—') : '—') + (qd ? ' › ' + (qd.nome || qd.codigo || '') : '');
+    const acoes = pode() ? `${mv.status === 'previsto' ? `<button class="lnk" onclick="realizarMov('${mv.id_mov}')">realizar</button> ` : ''}<button class="lnk" onclick="editMov('${mv.id_mov}')">editar</button>` : '';
+    return [
+      esc(fmtData(mv.data)), esc(loc), esc(mv.especie_texto || '—'), esc(PORTES[mv.porte] || mv.porte || '—'),
+      `<span class="mvb ${mv.tipo === 'entrada' ? 'ent' : 'sai'}">${mv.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'}</span>`,
+      esc(movMotivoLabel(mv) || '—'), N(mv.quantidade),
+      `<span class="mvb ${mv.status === 'realizado' ? 'real' : 'prev'}">${mv.status === 'realizado' ? 'Realizada' : 'Prevista'}</span>`, acoes
+    ];
+  });
+  $('mv-tbl').innerHTML = tabela([{ t: 'Data' }, { t: 'Local' }, { t: 'Espécie' }, { t: 'Porte' }, { t: 'Tipo' }, { t: 'Motivo' }, { t: 'Qtd', n: 1 }, { t: 'Situação' }, { t: '' }], trs, 'Nenhuma movimentação no filtro.');
+}
+
+/* ── nova / editar / realizar / excluir ── */
+function movSelMotivo(id, tipo, sel) { const opts = MOV_MOTIVOS[tipo] || {}; return `<option value="">—</option>` + Object.entries(opts).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(l)}</option>`).join(''); }
+function movAtualizarMotivo() { const t = $('mv-tipo').value; $('mv-motivo').innerHTML = movSelMotivo('mv-motivo', t, ''); const st = $('mv-status').value; $('mv-data-lbl').textContent = st === 'previsto' ? 'Data prevista' : 'Data'; }
+function novaMov() {
+  if (!QUAD.length) return showToast('Cadastre uma quadra primeiro (o croqui cria quadras rápido).', 'error');
+  const ops = QUAD.map(q => `<option value="${q.id_quadra}">${esc((q._c ? (q._c.nome || q._c.codigo) : '?') + ' › ' + (q.nome || q.codigo || 'quadra'))}</option>`).join('');
+  $('content').innerHTML = `
+    <div class="view-h"><h2><button class="lnk" onclick="renderMov()">← Movimentações</button> &nbsp;·&nbsp; Nova movimentação</h2></div>
+    <div class="mv-form"><div class="sec">
+      <div class="row2">
+        <div><label>Tipo</label><select id="mv-tipo" onchange="movAtualizarMotivo()"><option value="entrada">↑ Entrada (chega muda)</option><option value="saida">↓ Saída (sai muda)</option></select></div>
+        <div><label>Situação</label><select id="mv-status" onchange="movAtualizarMotivo()"><option value="realizado">Realizada (mexe no estoque)</option><option value="previsto">Prevista (planejada)</option></select></div>
+      </div>
+      <label>Quadra</label><select id="mv-quad" onchange="movHint()">${ops}</select>
+      <label>Espécie</label><input id="mv-esp" list="dl-esp" placeholder="Nome da espécie" oninput="movHint()">${dataListEsp()}
+      <div class="row2">
+        <div><label>Porte</label><select id="mv-porte" onchange="movHint()"><option value="">—</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+        <div><label>Quantidade</label><input id="mv-qtd" type="number" min="1" placeholder="0"></div>
+      </div>
+      <div id="mv-hint" class="mv-hint"></div>
+      <div class="row2">
+        <div><label id="mv-data-lbl">Data</label><input id="mv-data" type="date" value="${hojeISO()}"></div>
+        <div><label>Motivo</label><select id="mv-motivo"></select></div>
+      </div>
+      <label>Observações</label><textarea id="mv-obs" rows="2"></textarea>
+      <div class="btn-row"><button class="btn btn-primary" onclick="salvarMov()">Registrar movimentação</button><button class="btn" onclick="renderMov()">Cancelar</button></div>
+    </div></div>`;
+  movAtualizarMotivo(); movHint();
+}
+function movHint() {
+  const el = $('mv-hint'); if (!el) return;
+  const idq = $('mv-quad') ? $('mv-quad').value : '', esp = $('mv-esp') ? val('mv-esp') : '', porte = $('mv-porte') ? $('mv-porte').value : '';
+  if (!idq || !esp) { el.textContent = ''; el.className = 'mv-hint'; return; }
+  const it = acharItem(idq, esp, porte);
+  if (it) { el.innerHTML = `Estoque atual nesta quadra: <b>${+it.quantidade || 0}</b> muda(s).`; el.className = 'mv-hint'; }
+  else { el.textContent = 'Espécie/porte novos nesta quadra — o item será criado com este lançamento.'; el.className = 'mv-hint new'; }
+}
+async function salvarMov() {
+  const tipo = $('mv-tipo').value, status = $('mv-status').value, id_quadra = $('mv-quad').value;
+  const especie = val('mv-esp'), porte = $('mv-porte').value || null, q = +$('mv-qtd').value || 0;
+  const data = $('mv-data').value || hojeISO(), motivo = $('mv-motivo').value || null, obs = val('mv-obs') || null;
+  if (!id_quadra) return showToast('Selecione a quadra.', 'error');
+  if (!especie) return showToast('Informe a espécie.', 'error');
+  if (!(q > 0)) return showToast('Quantidade deve ser maior que zero.', 'error');
+  try {
+    const it = await acharOuCriarItem(id_quadra, especie, porte);
+    if (tipo === 'saida' && status === 'realizado' && q > (+it.quantidade || 0)) return showToast(`Estoque insuficiente: ${+it.quantidade || 0} disponível nesta quadra.`, 'error');
+    const d = { id_mov: uuid(), id_item: it.id_item, id_quadra, especie_texto: especie, porte, tipo, status, motivo, quantidade: q, data, obs, criado_em: nowIso(), criado_por: userEmail };
+    await sbInsert('horto_movimentos', d); MOV.unshift(d);
+    if (status === 'realizado') await ajustarEstoque(it, tipo === 'entrada' ? q : -q);
+    fecharDrawer(); renderMov(); showToast('Movimentação registrada.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message + (/movimentos|column|schema|PGRST|relation/i.test(e.message) ? ' — rode horto_movimentos.sql no Supabase' : ''), 'error'); }
+}
+function editMov(id) {
+  const mv = MOV.find(x => x.id_mov === id); if (!mv) return;
+  const qd = mv.id_quadra ? qById[mv.id_quadra] : null, c = qd ? qd._c : null, prev = mv.status === 'previsto', ed = pode();
+  $('content').innerHTML = `
+    <div class="view-h"><h2><button class="lnk" onclick="renderMov()">← Movimentações</button> &nbsp;·&nbsp; ${mv.tipo === 'entrada' ? '↑ Entrada' : '↓ Saída'} ${mv.status === 'realizado' ? 'realizada' : 'prevista'}</h2></div>
+    <div class="mv-form"><div class="sec">
+      <div class="ro">${esc((c ? (c.nome || c.codigo) : '—') + (qd ? ' › ' + (qd.nome || qd.codigo) : ''))} · ${esc(mv.especie_texto || '—')} · ${esc(PORTES[mv.porte] || mv.porte || '—')}</div>
+      <div class="row2">
+        <div><label>Quantidade</label><input id="mv-qtd" type="number" min="1" value="${mv.quantidade != null ? mv.quantidade : ''}" ${ed && prev ? '' : 'disabled'}></div>
+        <div><label>${prev ? 'Data prevista' : 'Data'}</label><input id="mv-data" type="date" value="${mv.data || ''}" ${ed ? '' : 'disabled'}></div>
+      </div>
+      <label>Motivo</label><select id="mv-motivo" ${ed ? '' : 'disabled'}>${movSelMotivo('mv-motivo', mv.tipo, mv.motivo)}</select>
+      <label>Observações</label><textarea id="mv-obs" rows="2" ${ed ? '' : 'disabled'}>${esc(mv.obs || '')}</textarea>
+      ${!prev ? '<div class="ro">Realizada já afetou o estoque. Para corrigir a quantidade, exclua (reverte) e lance de novo.</div>' : ''}
+      <div class="btn-row">${ed ? `<button class="btn btn-primary" onclick="salvarEditMov('${id}')">Salvar</button>${prev ? `<button class="btn" onclick="realizarMov('${id}')">Realizar agora</button>` : ''}<button class="btn btn-danger" onclick="excluirMov('${id}')">Excluir</button>` : ''}<button class="btn" onclick="renderMov()">Voltar</button></div>
+    </div></div>`;
+}
+async function salvarEditMov(id) {
+  const mv = MOV.find(x => x.id_mov === id); if (!mv) return;
+  const patch = { data: $('mv-data').value || mv.data, motivo: $('mv-motivo').value || null, obs: val('mv-obs') || null };
+  if (mv.status === 'previsto') { const q = +$('mv-qtd').value || 0; if (!(q > 0)) return showToast('Quantidade inválida.', 'error'); patch.quantidade = q; }
+  try { await sbUpdate('horto_movimentos', 'id_mov=eq.' + id, patch); Object.assign(mv, patch); fecharDrawer(); renderMov(); showToast('Movimentação salva.', 'success'); }
+  catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function realizarMov(id) {
+  const mv = MOV.find(x => x.id_mov === id); if (!mv || mv.status !== 'previsto') return;
+  try {
+    const it = acharItem(mv.id_quadra, mv.especie_texto, mv.porte) || await acharOuCriarItem(mv.id_quadra, mv.especie_texto, mv.porte);
+    const q = +mv.quantidade || 0;
+    if (mv.tipo === 'saida' && q > (+it.quantidade || 0)) return showToast(`Estoque insuficiente: ${+it.quantidade || 0} disponível.`, 'error');
+    const patch = { status: 'realizado', data: hojeISO() };
+    await sbUpdate('horto_movimentos', 'id_mov=eq.' + id, patch); mv.id_item = it.id_item; Object.assign(mv, patch);
+    await ajustarEstoque(it, mv.tipo === 'entrada' ? q : -q);
+    fecharDrawer(); renderMov(); showToast('Movimentação realizada — estoque atualizado.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+async function excluirMov(id) {
+  const mv = MOV.find(x => x.id_mov === id); if (!mv) return;
+  if (!confirm('Excluir esta movimentação?' + (mv.status === 'realizado' ? '\n\nO efeito dela no estoque será revertido.' : ''))) return;
+  try {
+    await sbDelete('horto_movimentos', 'id_mov=eq.' + id);
+    if (mv.status === 'realizado') { const it = ITENS.find(x => x.id_item === mv.id_item); if (it) await ajustarEstoque(it, mv.tipo === 'entrada' ? -(+mv.quantidade || 0) : (+mv.quantidade || 0)); }
+    MOV = MOV.filter(x => x.id_mov !== id); fecharDrawer(); renderMov(); showToast('Movimentação excluída.', 'success');
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+function exportMov() {
+  const L = [['Data', 'Canteiro', 'Quadra', 'Espécie', 'Porte', 'Tipo', 'Motivo', 'Quantidade', 'Situação', 'Observações']];
+  movFiltrado().forEach(mv => { const qd = mv.id_quadra ? qById[mv.id_quadra] : null, c = qd ? qd._c : null;
+    L.push([fmtData(mv.data), c ? (c.nome || c.codigo || '') : '', qd ? (qd.nome || qd.codigo || '') : '', mv.especie_texto || '', PORTES[mv.porte] || mv.porte || '', mv.tipo === 'entrada' ? 'Entrada' : 'Saída', movMotivoLabel(mv), mv.quantidade, mv.status === 'realizado' ? 'Realizada' : 'Prevista', mv.obs || '']); });
+  baixarCSV('movimentacoes_horto.csv', L);
 }
 
 /* ── DRAWER genérico ── */
@@ -735,7 +1386,7 @@ async function excluirQuadra(id) {
 function selQuadra(id, sel) {
   return `<select id="${id}">${QUAD.map(q => `<option value="${q.id_quadra}" ${q.id_quadra === sel ? 'selected' : ''}>${esc((q._c ? (q._c.nome || q._c.codigo) : '?') + ' › ' + (q.nome || q.codigo || 'quadra'))}</option>`).join('')}</select>`;
 }
-function selPorte(sel) { return `<select id="f-porte-e"><option value="">—</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+function selPorte(sel) { return `<select id="f-porte-e"><option value="">—</option>${Object.entries(PORTES).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l} (${PORTE_FAIXA[v]})</option>`).join('')}</select>`; }
 function selFito(sel) { return `<select id="f-fito"><option value="">—</option>${Object.entries(FITO).map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
 function dataListEsp() { return `<datalist id="dl-esp">${CAT.map(c => `<option value="${esc(c.nome_popular)}">`).join('')}</datalist>`; }
 function editItem(id) {

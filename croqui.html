@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Croqui do Canteiro — protótipo</title>
+<link rel="stylesheet" href="css/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text-primary); }
+
+  header { background: var(--accent-dark); color: #fff; padding: 12px 18px;
+    display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 700; }
+  header .sub { font-size: 12px; opacity: .8; }
+  header .proto { margin-left: auto; font-size: 11px; background: var(--warning);
+    padding: 3px 9px; border-radius: 20px; font-weight: 700; letter-spacing: .3px; }
+
+  .wrap { display: grid; grid-template-columns: 300px 1fr; gap: 14px; padding: 14px;
+    align-items: start; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 820px){ .wrap { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; }
+  .panel + .panel { margin-top: 14px; }
+  .panel h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase;
+    letter-spacing: .4px; color: var(--text-secondary); }
+
+  label { display: block; font-size: 12px; color: var(--text-secondary); margin: 8px 0 3px; }
+  input[type=number], input[type=text], select {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 9px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+
+  .btn { border: 1px solid var(--border); background: #fff; color: var(--text-primary);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn.on { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent-dark); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+  .hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; margin-top: 8px; }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; background: #fff; padding: 7px; font-size: 12.5px;
+    cursor: pointer; font-weight: 600; color: var(--text-secondary); }
+  .seg button.on { background: var(--accent); color: #fff; }
+
+  /* palco do desenho */
+  .stage-wrap { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 10px; }
+  .stage-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 10px; }
+  .stage-tools .grow { flex: 1; }
+  svg.stage { width: 100%; height: auto; display: block; background: #FBFCFE;
+    border: 1px solid var(--border); border-radius: 10px; touch-action: none; cursor: crosshair; }
+  svg.stage.mode-select { cursor: default; }
+
+  .g-line { stroke: #EAEFF7; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .g-line.m5 { stroke: #DCE5F2; }
+  .cant-rect { fill: #fff; stroke: var(--accent-dark); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .quad { stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: move; }
+  .quad.sel { stroke: var(--warning); stroke-width: 2.5; }
+  .quad-label { fill: var(--text-primary); font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+  .quad-sub { fill: var(--text-secondary); text-anchor: middle; dominant-baseline: middle; }
+  .ruler-txt { fill: var(--text-muted); text-anchor: middle; dominant-baseline: middle; }
+  .handle { fill: #fff; stroke: var(--warning); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: nwse-resize; }
+  .ghost { fill: rgba(41,78,152,.10); stroke: var(--accent); stroke-width: 1.5;
+    stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+  .dim-txt { fill: var(--accent-dark); font-weight: 700; text-anchor: middle; }
+
+  .list { margin-top: 6px; }
+  .qitem { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; }
+  .qitem:hover { background: var(--bg); }
+  .qitem.sel { background: var(--accent-light); }
+  .qitem .sw { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.1); }
+  .qitem .nm { font-weight: 600; }
+  .qitem .mt { margin-left: auto; color: var(--text-secondary); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .empty { color: var(--text-muted); font-size: 12.5px; padding: 8px 0; }
+
+  .legend { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-secondary); margin-top: 8px; }
+  .legend .bar { height: 10px; flex: 1; border-radius: 5px;
+    background: linear-gradient(90deg, #E7EDF9, #294E98); }
+
+  .kv { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; }
+  .kv b { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Croqui do canteiro</h1>
+    <div class="sub" id="hd-sub">Mapa do inventário — desenho por cotas e à mão livre</div>
+  </div>
+  <span class="proto">PROTÓTIPO</span>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== COLUNA ESQUERDA: controles ===== -->
+  <div>
+    <div class="panel">
+      <h2>Canteiro (retângulo)</h2>
+      <div class="row">
+        <div><label>Largura (m)</label><input type="number" id="c-larg" value="12" min="1" step="0.5"></div>
+        <div><label>Comprimento (m)</label><input type="number" id="c-comp" value="8" min="1" step="0.5"></div>
+      </div>
+      <label>Nome / código</label>
+      <input type="text" id="c-nome" value="Canteiro C5">
+      <div class="hint">O canteiro é sempre retangular. As cotas definem a escala do croqui.</div>
+    </div>
+
+    <div class="panel">
+      <h2>Adicionar quadra</h2>
+      <div class="seg" id="seg-modo">
+        <button data-modo="cotas" class="on">Por cotas</button>
+        <button data-modo="livre">À mão livre</button>
+      </div>
+
+      <div id="form-cotas">
+        <div class="row">
+          <div><label>X (m)</label><input type="number" id="q-x" value="0.5" step="0.25"></div>
+          <div><label>Y (m)</label><input type="number" id="q-y" value="0.5" step="0.25"></div>
+        </div>
+        <div class="row">
+          <div><label>Largura (m)</label><input type="number" id="q-w" value="5" step="0.25"></div>
+          <div><label>Comprim. (m)</label><input type="number" id="q-h" value="3" step="0.25"></div>
+        </div>
+        <label>Código da quadra</label>
+        <input type="text" id="q-cod" placeholder="Q1">
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" onclick="addPorCotas()">+ Adicionar quadra</button>
+        </div>
+      </div>
+
+      <div id="form-livre" style="display:none">
+        <div class="hint">Arraste com o mouse sobre o croqui para desenhar o retângulo da quadra.
+          Ele "gruda" na grade de 0,25 m e mostra as cotas enquanto você arrasta.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Quadras <span id="q-count" style="color:var(--text-muted)"></span></h2>
+      <div class="list" id="lista-quadras"><div class="empty">Nenhuma quadra ainda.</div></div>
+    </div>
+  </div>
+
+  <!-- ===== COLUNA DIREITA: palco + inspetor ===== -->
+  <div>
+    <div class="stage-wrap">
+      <div class="stage-tools">
+        <div class="seg" style="max-width:260px">
+          <button id="tool-desenhar" class="on" onclick="setFerramenta('desenhar')">✏️ Desenhar</button>
+          <button id="tool-selecionar" onclick="setFerramenta('selecionar')">👆 Selecionar</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;cursor:pointer">
+          <input type="checkbox" id="chk-invent" checked onchange="render()"> Mapa do inventário
+        </label>
+        <div class="grow"></div>
+        <button class="btn btn-sm" onclick="exportPNG()">⬇ PNG</button>
+        <button class="btn btn-sm" onclick="exportJSON()">⬇ JSON</button>
+      </div>
+
+      <svg class="stage" id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
+
+      <div class="legend" id="legenda" style="display:none">
+        <span>Menos mudas</span><div class="bar"></div><span>Mais mudas</span>
+      </div>
+    </div>
+
+    <div class="panel" id="inspetor" style="display:none">
+      <h2>Quadra selecionada</h2>
+      <div class="row">
+        <div><label>Código</label><input type="text" id="i-cod"></div>
+        <div><label>Mudas (inventário)</label><input type="number" id="i-mudas" min="0"></div>
+      </div>
+      <div class="row">
+        <div><label>X (m)</label><input type="number" id="i-x" step="0.25"></div>
+        <div><label>Y (m)</label><input type="number" id="i-y" step="0.25"></div>
+        <div><label>Largura (m)</label><input type="number" id="i-w" step="0.25"></div>
+        <div><label>Comprim. (m)</label><input type="number" id="i-h" step="0.25"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="aplicarInspetor()">Aplicar</button>
+        <button class="btn btn-sm" onclick="excluirSelecionada()" style="color:var(--danger)">Excluir</button>
+      </div>
+      <div class="hint" style="margin-top:12px">
+        <div class="kv"><span>Área da quadra</span><b id="i-area">—</b></div>
+        <div class="kv"><span>Densidade</span><b id="i-dens">—</b></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   Croqui do canteiro — protótipo (dados 100% locais)
+   Modelo (o mesmo que iria para o banco como JSON):
+     { canteiro:{largura_m, comprimento_m, nome},
+       quadras:[ {id, codigo, x, y, w, h, mudas} ] }
+   Coordenadas em METROS, origem no canto superior-esquerdo.
+   ============================================================ */
+const SNAP = 0.25;                 // grade de encaixe (m)
+const snap = v => Math.round(v / SNAP) * SNAP;
+
+let modelo = {
+  canteiro: { largura_m: 12, comprimento_m: 8, nome: 'Canteiro C5' },
+  quadras: [
+    { id: uid(), codigo: 'Q1', x: 0.5, y: 0.5, w: 5,   h: 3, mudas: 120 },
+    { id: uid(), codigo: 'Q2', x: 6,   y: 0.5, w: 5.5, h: 3, mudas: 60  },
+    { id: uid(), codigo: 'Q3', x: 0.5, y: 4,   w: 11,  h: 3.5, mudas: 220 }
+  ]
+};
+let ferramenta = 'desenhar';       // 'desenhar' | 'selecionar'
+let modoAdd = 'cotas';             // 'cotas' | 'livre'
+let selId = null;
+
+function uid(){ return 'q' + Math.random().toString(36).slice(2, 9); }
+const $ = id => document.getElementById(id);
+const svg = $('stage');
+const NS = 'http://www.w3.org/2000/svg';
+const MARGEM = 1.2;                // margem em metros para as réguas
+
+/* ---------- geometria de tela <-> metros ---------- */
+function viewBox(){
+  const W = modelo.canteiro.largura_m, H = modelo.canteiro.comprimento_m;
+  return { x: -MARGEM, y: -MARGEM, w: W + MARGEM*2, h: H + MARGEM*2, W, H };
+}
+function pontoMetros(evt){
+  const p = svg.createSVGPoint();
+  p.x = evt.clientX; p.y = evt.clientY;
+  const m = p.matrixTransform(svg.getScreenCTM().inverse());
+  return { x: m.x, y: m.y };
+}
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+/* fonte proporcional ao canteiro para os rótulos lerem bem em qualquer escala */
+function fs(){ return Math.max(0.28, Math.min(0.55, viewBox().W / 28)); }
+
+/* ---------- cor do "mapa do inventário" (heatmap) ---------- */
+function corMudas(m){
+  const arr = modelo.quadras.map(q => q.mudas || 0);
+  const max = Math.max(1, ...arr);
+  const t = (m || 0) / max;              // 0..1
+  // interpola #E7EDF9 -> #294E98
+  const a = [231,237,249], b = [41,78,152];
+  const c = a.map((v,i) => Math.round(v + (b[i]-v)*t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function el(tag, attrs, kids){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  (kids||[]).forEach(c => e.appendChild(c));
+  return e;
+}
+function txt(x, y, s, cls, size){
+  const t = el('text', { x, y, class: cls, 'font-size': size || fs() });
+  t.textContent = s; return t;
+}
+
+function render(){
+  const vb = viewBox();
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  svg.setAttribute('height', Math.round(560 * vb.h / vb.w));
+  svg.classList.toggle('mode-select', ferramenta === 'selecionar');
+  svg.style.cursor = ferramenta === 'selecionar' ? 'default' : 'crosshair';
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const invent = $('chk-invent').checked;
+  $('legenda').style.display = invent ? 'flex' : 'none';
+
+  // grade em metros
+  for (let x = 0; x <= vb.W + .001; x++)
+    svg.appendChild(el('line', { class:'g-line'+(x%5===0?' m5':''), x1:x, y1:0, x2:x, y2:vb.H }));
+  for (let y = 0; y <= vb.H + .001; y++)
+    svg.appendChild(el('line', { class:'g-line'+(y%5===0?' m5':''), x1:0, y1:y, x2:vb.W, y2:y }));
+
+  // réguas (números de metro)
+  const rs = fs()*0.8;
+  for (let x = 0; x <= vb.W + .001; x += (vb.W>20?5:1))
+    svg.appendChild(txt(x, -0.45, x+'', 'ruler-txt', rs));
+  for (let y = 0; y <= vb.H + .001; y += (vb.H>20?5:1))
+    svg.appendChild(txt(-0.55, y, y+'', 'ruler-txt', rs));
+
+  // retângulo do canteiro
+  svg.appendChild(el('rect', { class:'cant-rect', x:0, y:0, width:vb.W, height:vb.H, rx:0.05 }));
+
+  // quadras
+  modelo.quadras.forEach(q => {
+    const fill = invent ? corMudas(q.mudas) : 'rgba(41,78,152,.06)';
+    const r = el('rect', { class:'quad'+(q.id===selId?' sel':''), x:q.x, y:q.y,
+      width:q.w, height:q.h, rx:0.05, fill, 'data-id':q.id });
+    svg.appendChild(r);
+    const cx = q.x + q.w/2, cy = q.y + q.h/2;
+    const escuro = invent && (q.mudas||0) > Math.max(1,...modelo.quadras.map(z=>z.mudas||0))*0.55;
+    const lbl = txt(cx, cy - fs()*0.35, q.codigo || '—', 'quad-label', fs());
+    if (escuro) lbl.setAttribute('fill', '#fff');
+    svg.appendChild(lbl);
+    if (invent){
+      const sub = txt(cx, cy + fs()*0.55, (q.mudas||0)+' mudas', 'quad-sub', fs()*0.72);
+      if (escuro) sub.setAttribute('fill', 'rgba(255,255,255,.85)');
+      svg.appendChild(sub);
+    }
+  });
+
+  // alça de redimensionamento na selecionada
+  const sel = modelo.quadras.find(q => q.id === selId);
+  if (sel && ferramenta === 'selecionar'){
+    const hs = Math.max(0.18, fs()*0.5);
+    svg.appendChild(el('rect', { class:'handle', x:sel.x+sel.w-hs/2, y:sel.y+sel.h-hs/2,
+      width:hs, height:hs, 'data-handle':'br' }));
+  }
+
+  desenharQuadrasLista();
+  atualizarInspetor();
+  $('hd-sub').textContent = `${modelo.canteiro.nome} · ${vb.W}×${vb.H} m · ${modelo.quadras.length} quadra(s)`;
+}
+
+function desenharQuadrasLista(){
+  const box = $('lista-quadras');
+  $('q-count').textContent = modelo.quadras.length ? '('+modelo.quadras.length+')' : '';
+  if (!modelo.quadras.length){ box.innerHTML = '<div class="empty">Nenhuma quadra ainda.</div>'; return; }
+  box.innerHTML = '';
+  modelo.quadras.forEach(q => {
+    const d = document.createElement('div');
+    d.className = 'qitem'+(q.id===selId?' sel':'');
+    d.onclick = () => { selecionar(q.id); setFerramenta('selecionar'); };
+    d.innerHTML = `<span class="sw" style="background:${corMudas(q.mudas)}"></span>
+      <span class="nm">${q.codigo||'—'}</span>
+      <span style="color:var(--text-muted);font-size:11.5px">${q.w}×${q.h} m</span>
+      <span class="mt">${q.mudas||0} mudas</span>`;
+    box.appendChild(d);
+  });
+}
+
+/* ============================================================
+   INTERAÇÃO — desenhar à mão livre / mover / redimensionar
+   ============================================================ */
+let drag = null;   // { tipo:'novo'|'mover'|'resize', ... }
+
+svg.addEventListener('pointerdown', e => {
+  const m = pontoMetros(e);
+  const alvo = e.target;
+
+  if (ferramenta === 'selecionar'){
+    if (alvo.dataset.handle === 'br'){
+      const q = modelo.quadras.find(x => x.id === selId);
+      drag = { tipo:'resize', id:q.id }; svg.setPointerCapture(e.pointerId); return;
+    }
+    if (alvo.dataset.id){
+      const q = modelo.quadras.find(x => x.id === alvo.dataset.id);
+      selecionar(q.id);
+      drag = { tipo:'mover', id:q.id, dx:m.x - q.x, dy:m.y - q.y };
+      svg.setPointerCapture(e.pointerId); return;
+    }
+    selecionar(null); return;
+  }
+
+  // ferramenta desenhar -> novo retângulo à mão livre
+  const x0 = clamp(snap(m.x), 0, modelo.canteiro.largura_m);
+  const y0 = clamp(snap(m.y), 0, modelo.canteiro.comprimento_m);
+  drag = { tipo:'novo', x0, y0, x1:x0, y1:y0 };
+  svg.setPointerCapture(e.pointerId);
+});
+
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const m = pontoMetros(e);
+  const W = modelo.canteiro.largura_m, H = modelo.canteiro.comprimento_m;
+
+  if (drag.tipo === 'novo'){
+    drag.x1 = clamp(snap(m.x), 0, W);
+    drag.y1 = clamp(snap(m.y), 0, H);
+    render(); desenharGhost(drag);
+  } else if (drag.tipo === 'mover'){
+    const q = modelo.quadras.find(x => x.id === drag.id);
+    q.x = clamp(snap(m.x - drag.dx), 0, W - q.w);
+    q.y = clamp(snap(m.y - drag.dy), 0, H - q.h);
+    render();
+  } else if (drag.tipo === 'resize'){
+    const q = modelo.quadras.find(x => x.id === drag.id);
+    q.w = clamp(snap(m.x - q.x), SNAP, W - q.x);
+    q.h = clamp(snap(m.y - q.y), SNAP, H - q.y);
+    render();
+  }
+});
+
+svg.addEventListener('pointerup', e => {
+  if (drag && drag.tipo === 'novo'){
+    const x = Math.min(drag.x0, drag.x1), y = Math.min(drag.y0, drag.y1);
+    const w = Math.abs(drag.x1 - drag.x0), h = Math.abs(drag.y1 - drag.y0);
+    if (w >= SNAP && h >= SNAP){
+      const q = { id: uid(), codigo: proximoCodigo(), x, y, w, h, mudas: 0 };
+      modelo.quadras.push(q); selecionar(q.id); setFerramenta('selecionar');
+    }
+  }
+  drag = null;
+  render();
+});
+
+function desenharGhost(d){
+  const x = Math.min(d.x0, d.x1), y = Math.min(d.y0, d.y1);
+  const w = Math.abs(d.x1 - d.x0), h = Math.abs(d.y1 - d.y0);
+  svg.appendChild(el('rect', { class:'ghost', x, y, width:w, height:h }));
+  if (w >= SNAP || h >= SNAP){
+    const t = txt(x + w/2, y - fs()*0.3, `${round(w)} × ${round(h)} m`, 'dim-txt', fs()*0.8);
+    svg.appendChild(t);
+  }
+}
+
+/* ============================================================
+   AÇÕES
+   ============================================================ */
+function round(v){ return Math.round(v*100)/100; }
+function proximoCodigo(){
+  let n = 1; const cods = new Set(modelo.quadras.map(q => q.codigo));
+  while (cods.has('Q'+n)) n++; return 'Q'+n;
+}
+function selecionar(id){ selId = id; render(); }
+
+function addPorCotas(){
+  const q = {
+    id: uid(),
+    codigo: ($('q-cod').value || '').trim() || proximoCodigo(),
+    x: clamp(snap(+$('q-x').value||0), 0, modelo.canteiro.largura_m),
+    y: clamp(snap(+$('q-y').value||0), 0, modelo.canteiro.comprimento_m),
+    w: Math.max(SNAP, snap(+$('q-w').value||1)),
+    h: Math.max(SNAP, snap(+$('q-h').value||1)),
+    mudas: 0
+  };
+  q.w = Math.min(q.w, modelo.canteiro.largura_m - q.x);
+  q.h = Math.min(q.h, modelo.canteiro.comprimento_m - q.y);
+  modelo.quadras.push(q);
+  $('q-cod').value = '';
+  selecionar(q.id); setFerramenta('selecionar');
+}
+
+function excluirSelecionada(){
+  modelo.quadras = modelo.quadras.filter(q => q.id !== selId);
+  selId = null; render();
+}
+
+function aplicarInspetor(){
+  const q = modelo.quadras.find(x => x.id === selId); if (!q) return;
+  q.codigo = ($('i-cod').value||'').trim() || q.codigo;
+  q.mudas = Math.max(0, +$('i-mudas').value || 0);
+  q.x = clamp(snap(+$('i-x').value||0), 0, modelo.canteiro.largura_m);
+  q.y = clamp(snap(+$('i-y').value||0), 0, modelo.canteiro.comprimento_m);
+  q.w = clamp(snap(+$('i-w').value||1), SNAP, modelo.canteiro.largura_m - q.x);
+  q.h = clamp(snap(+$('i-h').value||1), SNAP, modelo.canteiro.comprimento_m - q.y);
+  render();
+}
+
+function atualizarInspetor(){
+  const q = modelo.quadras.find(x => x.id === selId);
+  $('inspetor').style.display = q ? 'block' : 'none';
+  if (!q) return;
+  $('i-cod').value = q.codigo || ''; $('i-mudas').value = q.mudas || 0;
+  $('i-x').value = q.x; $('i-y').value = q.y; $('i-w').value = q.w; $('i-h').value = q.h;
+  const area = round(q.w * q.h);
+  $('i-area').textContent = area + ' m²';
+  $('i-dens').textContent = area ? round((q.mudas||0)/area) + ' mudas/m²' : '—';
+}
+
+/* ---------- ferramentas / modo ---------- */
+function setFerramenta(f){
+  ferramenta = f;
+  $('tool-desenhar').classList.toggle('on', f==='desenhar');
+  $('tool-selecionar').classList.toggle('on', f==='selecionar');
+  render();
+}
+document.querySelectorAll('#seg-modo button').forEach(b => {
+  b.onclick = () => {
+    modoAdd = b.dataset.modo;
+    document.querySelectorAll('#seg-modo button').forEach(x => x.classList.toggle('on', x===b));
+    $('form-cotas').style.display = modoAdd==='cotas' ? 'block' : 'none';
+    $('form-livre').style.display = modoAdd==='livre' ? 'block' : 'none';
+    setFerramenta(modoAdd==='livre' ? 'desenhar' : 'selecionar');
+  };
+});
+
+/* ---------- canteiro (cotas + nome) ---------- */
+['c-larg','c-comp'].forEach(id => $(id).addEventListener('input', () => {
+  modelo.canteiro.largura_m = Math.max(1, +$('c-larg').value||1);
+  modelo.canteiro.comprimento_m = Math.max(1, +$('c-comp').value||1);
+  // mantém quadras dentro dos novos limites
+  modelo.quadras.forEach(q => {
+    q.x = clamp(q.x, 0, modelo.canteiro.largura_m - SNAP);
+    q.y = clamp(q.y, 0, modelo.canteiro.comprimento_m - SNAP);
+    q.w = Math.min(q.w, modelo.canteiro.largura_m - q.x);
+    q.h = Math.min(q.h, modelo.canteiro.comprimento_m - q.y);
+  });
+  render();
+}));
+$('c-nome').addEventListener('input', () => { modelo.canteiro.nome = $('c-nome').value; render(); });
+
+document.addEventListener('keydown', e => {
+  if ((e.key==='Delete'||e.key==='Backspace') && selId &&
+      !/INPUT|TEXTAREA/.test(document.activeElement.tagName)){
+    excluirSelecionada();
+  }
+});
+
+/* ---------- exportar ---------- */
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(modelo, null, 2)], {type:'application/json'});
+  baixar(blob, (modelo.canteiro.nome||'croqui').replace(/\s+/g,'_')+'.json');
+}
+function exportPNG(){
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', NS);
+  const vb = viewBox();
+  const scale = 80; // px por metro no PNG
+  clone.setAttribute('width', Math.round(vb.w*scale));
+  clone.setAttribute('height', Math.round(vb.h*scale));
+  const data = new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(vb.w*scale); cv.height = Math.round(vb.h*scale);
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img, 0, 0);
+    cv.toBlob(b => baixar(b, (modelo.canteiro.nome||'croqui').replace(/\s+/g,'_')+'.png'));
+  };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+}
+function baixar(blob, nome){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* start */
+setFerramenta('selecionar');
+render();
+</script>
+</body>
+</html>

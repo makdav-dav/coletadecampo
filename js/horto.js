@@ -506,6 +506,123 @@ async function salvarEspecie() {
   renderEspecies();
 }
 
+/* ================================================================
+   MOVIMENTAÇÃO DE MUDAS — entradas/saídas (realizadas e previstas)
+   Lançada dentro de uma QUADRA (reaproveita hortoItens já carregado).
+   Offline-first: enfileira o registro e ajusta o estoque do item por
+   valor absoluto (mesmo padrão da edição de item).
+   ================================================================ */
+const MOV_MOTIVOS = {
+  entrada: { producao: 'Produção própria', compra: 'Compra', doacao_receb: 'Doação recebida', transf_in: 'Transferência (entrada)' },
+  saida: { plantio: 'Plantio / arborização', doacao: 'Doação', descarte: 'Morte / descarte', transf_out: 'Transferência (saída)' }
+};
+let hmRecent = [];   // movimentações criadas nesta sessão (feedback imediato)
+
+function fmtDataMob(d) { if (!d) return ''; const p = ('' + d).slice(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; }
+
+function abrirMovQuadra() {
+  if (!hortoQuadraAtual) return showToast('Abra uma quadra primeiro.', 'error');
+  const q = hortoQuadras.find(x => x.id_quadra === hortoQuadraAtual) || {};
+  document.getElementById('hm-sub').textContent = q.nome || q.codigo || 'Quadra';
+  hmRecent = [];
+  showPage('hmov');
+  limparChips('hm-tipo', 'on-green'); document.querySelector('#hm-tipo .chip[data-v="entrada"]').classList.add('on-green');
+  limparChips('hm-status', 'on-green'); document.querySelector('#hm-status .chip[data-v="realizado"]').classList.add('on-green');
+  document.getElementById('hm-qtd').value = '';
+  document.getElementById('hm-obs').value = '';
+  document.getElementById('hm-data').value = new Date().toISOString().slice(0, 10);
+  hmMontarItens();
+  hmMontarMotivo();
+  hmEstoqueHint();
+  renderMovLista();
+}
+
+function hmMontarItens() {
+  const sel = document.getElementById('hm-item');
+  if (!hortoItens.length) { sel.innerHTML = '<option value="">— nenhuma espécie nesta quadra —</option>'; return; }
+  sel.innerHTML = hortoItens.map(i =>
+    `<option value="${i.id_item}">${escapeHtml(i.especie_texto || 'Espécie')} · ${PORTES[i.porte] || i.porte || '—'} · ${i.quantidade != null ? i.quantidade : 0} em estoque</option>`).join('');
+}
+function hmItemSel() { const id = document.getElementById('hm-item').value; return hortoItens.find(x => x.id_item === id) || null; }
+function hmEstoqueHint() {
+  const it = hmItemSel(), el = document.getElementById('hm-estoque');
+  if (!it) { el.textContent = hortoItens.length ? '' : 'Cadastre a espécie no inventário da quadra antes de movimentar.'; return; }
+  el.innerHTML = `Estoque atual: <b>${it.quantidade != null ? it.quantidade : 0}</b> muda(s)`;
+}
+function hmMontarMotivo() {
+  const tipo = valorChipUnico('hm-tipo') || 'entrada', opts = MOV_MOTIVOS[tipo] || {};
+  document.getElementById('hm-motivo').innerHTML = '<option value="">—</option>' +
+    Object.entries(opts).map(([v, l]) => `<option value="${v}">${escapeHtml(l)}</option>`).join('');
+  document.getElementById('hm-data-lbl').textContent = (valorChipUnico('hm-status') || 'realizado') === 'previsto' ? 'Data prevista' : 'Data';
+}
+function hmPickTipo(el) { pickOne(el); hmMontarMotivo(); }
+function hmPickStatus(el) { pickOne(el); hmMontarMotivo(); }
+
+async function salvarMovMobile() {
+  if (!hortoQuadraAtual) return showToast('Abra uma quadra primeiro.', 'error');
+  const it = hmItemSel();
+  if (!it) return showToast('Selecione a espécie do inventário.', 'error');
+  const tipo = valorChipUnico('hm-tipo') || 'entrada';
+  const status = valorChipUnico('hm-status') || 'realizado';
+  const q = parseInt(document.getElementById('hm-qtd').value, 10);
+  if (isNaN(q) || q <= 0) return showToast('Informe a quantidade.', 'error');
+  const data = document.getElementById('hm-data').value || new Date().toISOString().slice(0, 10);
+  const motivo = document.getElementById('hm-motivo').value || null;
+  const obs = document.getElementById('hm-obs').value.trim() || null;
+  const atual = it.quantidade != null ? it.quantidade : 0;
+  if (tipo === 'saida' && status === 'realizado' && q > atual) return showToast(`Estoque insuficiente: ${atual} disponível.`, 'error');
+
+  // 1) registra a movimentação (fila)
+  const mov = { id_mov: uuid(), id_item: it.id_item, id_quadra: hortoQuadraAtual, especie_texto: it.especie_texto, porte: it.porte, tipo, status, motivo, quantidade: q, data, obs, criado_em: agora(), criado_por: userEmail };
+  await enqueue({ tipo: 'insert', tabela: 'horto_movimentos', dados: mov });
+
+  // 2) se realizada, ajusta o estoque do item (valor absoluto → offline-safe)
+  if (status === 'realizado') {
+    const novo = Math.max(0, atual + (tipo === 'entrada' ? q : -q));
+    const fila = await idbAll('fila');
+    const ins = fila.find(x => x.tipo === 'insert' && x.tabela === 'horto_itens' && x.dados && x.dados.id_item === it.id_item);
+    if (ins) { ins.dados = { ...ins.dados, quantidade: novo }; await idbPut('fila', ins); }
+    else { await enqueue({ tipo: 'update', tabela: 'horto_itens', filter: { id_item: 'eq.' + it.id_item }, patch: { quantidade: novo } }); }
+    const idx = hortoItens.findIndex(x => x.id_item === it.id_item);
+    if (idx >= 0) hortoItens[idx].quantidade = novo;
+  }
+
+  hmRecent.unshift(mov);
+  document.getElementById('hm-qtd').value = '';
+  document.getElementById('hm-obs').value = '';
+  hmMontarItens(); hmEstoqueHint(); renderMovLista();
+  showToast(status === 'realizado' ? 'Movimentação registrada — estoque atualizado.' : 'Movimentação prevista registrada.', 'success');
+}
+
+async function renderMovLista() {
+  const el = document.getElementById('hm-lista');
+  let arr = hmRecent.slice();
+  if (sessionValida() && navigator.onLine) {
+    try {
+      const rows = await sbSelect('horto_movimentos',
+        'select=id_mov,especie_texto,porte,tipo,status,motivo,quantidade,data&id_quadra=eq.' + hortoQuadraAtual + '&order=data.desc,criado_em.desc&limit=40') || [];
+      const ids = new Set(arr.map(m => m.id_mov));
+      arr = arr.concat(rows.filter(r => !ids.has(r.id_mov)));
+    } catch (e) { /* offline ou tabela ainda não criada */ }
+  }
+  if (!arr.length) { el.innerHTML = '<div class="empty">Nenhuma movimentação ainda.</div>'; return; }
+  el.innerHTML = arr.slice(0, 40).map(m => {
+    const cor = m.tipo === 'entrada' ? 'var(--success)' : 'var(--warning)';
+    const sinal = m.tipo === 'entrada' ? '+' : '−';
+    const mot = (MOV_MOTIVOS[m.tipo] && MOV_MOTIVOS[m.tipo][m.motivo]) || '';
+    const sit = m.status === 'previsto' ? ' · prevista' : '';
+    return `<div class="list-item">
+      <div>
+        <div class="li-title">${escapeHtml(m.especie_texto || '—')} · ${PORTES[m.porte] || m.porte || '—'}</div>
+        <div class="li-sub">${fmtDataMob(m.data)}${mot ? ' · ' + escapeHtml(mot) : ''}${sit}</div>
+      </div>
+      <span class="badge" style="color:${cor}; font-weight:800">${sinal}${m.quantidade}</span>
+    </div>`;
+  }).join('');
+}
+
+function voltarQuadraDoMov() { if (hortoQuadraAtual) abrirQuadra(hortoQuadraAtual); else voltarCanteiro(); }
+
 /* Insere uma espécie no catálogo (fila) e atualiza o cache local + selects.
    Retorna o registro criado. Usado pelo catálogo e pelo cadastro rápido. */
 async function inserirEspecieCatalogo(campos) {
