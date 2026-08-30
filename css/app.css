@@ -103,6 +103,19 @@
   }
   .chips-porte .chip.on small { opacity: .9; }
 
+  /* Avaliação de risco de árvores — itens com nota 0 a 3 */
+  .rk-bloco { margin-top: 4px; }
+  .rk-item { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .rk-item:last-child { border-bottom: 0; }
+  .rk-lbl { font-size: 13.5px; line-height: 1.25; flex: 1; }
+  .rk-seg { display: inline-flex; gap: 5px; flex-shrink: 0; }
+  .rk-seg button { width: 36px; height: 36px; border: 1px solid var(--border); background: #fff;
+    border-radius: 9px; font-size: 14px; font-weight: 700; color: var(--text-secondary); cursor: pointer; }
+  .rk-seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .rk-ro { background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+    padding: 9px 12px; font-size: 13px; color: var(--text-secondary); }
+
   .gps-box {
     display: flex; align-items: center; gap: 10px;
     background: var(--accent-light); border-radius: var(--radius); padding: 10px 12px;
