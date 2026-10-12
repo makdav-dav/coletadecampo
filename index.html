@@ -751,9 +751,28 @@
       </div>
       <button class="btn btn-sm" style="width:auto" onclick="capturarGPS('os')">Capturar</button>
     </div>
-    <div class="chips" style="margin-top:12px">
-      <span class="chip" id="os-rede" onclick="this.classList.toggle('on')">⚠️ Risco de rede elétrica (fio envolvido)</span>
+    <label>Quem acionou</label>
+    <input type="text" id="os-quem" placeholder="Defesa Civil, Guarda, Bombeiros, munícipe, 156...">
+    <label>Situação</label>
+    <div class="chips" id="os-situacao">
+      <span class="chip" data-v="Via totalmente obstruída" onclick="this.classList.toggle('on')">Via totalmente obstruída</span>
+      <span class="chip" data-v="Via parcialmente obstruída" onclick="this.classList.toggle('on')">Via parcialmente obstruída</span>
+      <span class="chip" data-v="Calçada" onclick="this.classList.toggle('on')">Calçada</span>
+      <span class="chip" data-v="Veículo ou imóvel atingido" onclick="this.classList.toggle('on')">Veículo ou imóvel atingido</span>
     </div>
+    <label>Risco</label>
+    <div class="chips">
+      <span class="chip" id="os-rede" onclick="this.classList.toggle('on')">⚠️ Rede elétrica (fio envolvido)</span>
+      <span class="chip" id="os-vitimas" onclick="this.classList.toggle('on')">Vítimas</span>
+      <span class="chip" id="os-transito" onclick="this.classList.toggle('on')">Trânsito</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Equipe e responsável de plantão <small style="font-weight:400">(opcional)</small></label>
+    <input type="text" id="os-equipe" placeholder="Nome da equipe / responsável">
+    <label>Equipamentos</label>
+    <input type="text" id="os-equip" placeholder="Motosserra, caminhão, sinalização, EPIs...">
   </div>
 
   <div class="card">
@@ -784,8 +803,10 @@
   <h2>Dar baixa na OS</h2>
   <div class="page-sub">Registre como o atendimento foi concluído.</div>
   <div class="card">
-    <label>Observações da conclusão</label>
+    <label>Serviço realizado</label>
     <textarea id="os-baixa-obs" placeholder="Ex.: via desobstruída, tronco removido, destinação do resíduo"></textarea>
+    <label>Pendências <small style="font-weight:400">(opcional)</small></label>
+    <textarea id="os-baixa-pend" placeholder="Ex.: remoção do tronco no dia útil, acionar concessionária, destocamento"></textarea>
   </div>
   <div class="card">
     <label>Fotos da conclusão (opcional)</label>

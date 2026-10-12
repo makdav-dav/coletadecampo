@@ -89,8 +89,9 @@ function atualizarHomeOS() {
 
 function novaOS() {
   showPage('os-form');
-  ['os-desc', 'os-end'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
-  document.getElementById('os-rede').classList.remove('on');
+  ['os-desc', 'os-end', 'os-quem', 'os-equipe', 'os-equip'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
+  ['os-rede', 'os-vitimas', 'os-transito'].forEach(i => document.getElementById(i).classList.remove('on'));
+  document.querySelectorAll('#os-situacao .chip').forEach(c => c.classList.remove('on'));
   gpsAtual = null;
   document.getElementById('os-gps-status').textContent = 'GPS não capturado';
   document.getElementById('os-gps-coord').textContent = '';
@@ -106,7 +107,11 @@ function montarLinkWhatsAppOS(dados) {
     '📍 ' + (dados.endereco || 'endereço não informado')
   ];
   if (dados.lat) linhas.push('🗺️ https://www.google.com/maps?q=' + dados.lat + ',' + dados.lng);
+  if ((dados.situacao || []).length) linhas.push('Situação: ' + dados.situacao.join(', '));
   if (dados.risco_rede) linhas.push('⚠️ Risco de rede elétrica — NÃO atuar sem a concessionária.');
+  if (dados.risco_vitimas) linhas.push('⚠️ Possíveis vítimas.');
+  if (dados.risco_transito) linhas.push('⚠️ Trânsito afetado.');
+  if (dados.quem_acionou) linhas.push('Acionado por: ' + dados.quem_acionou);
   linhas.push('Acionado em ' + fmtDataHoraOS(dados.aberto_em || agora()));
   const msg = linhas.join('\n');
   const numero = (dados.numero_whatsapp || emergNumeroAtual()).replace(/\D/g, '');
@@ -119,12 +124,19 @@ async function salvarOS() {
   const endereco = document.getElementById('os-end').value.trim();
   if (!endereco) return showToast('Informe o endereço.', 'error');
   const g = gpsAtual;
+  const situacao = [...document.querySelectorAll('#os-situacao .chip.on')].map(c => c.dataset.v);
   const risco_rede = document.getElementById('os-rede').classList.contains('on');
+  const risco_vitimas = document.getElementById('os-vitimas').classList.contains('on');
+  const risco_transito = document.getElementById('os-transito').classList.contains('on');
   const dados = {
     id_os: uuid(),
     descricao, endereco,
     lat: g ? g.lat : null, lng: g ? g.lng : null,
-    risco_rede,
+    quem_acionou: document.getElementById('os-quem').value.trim() || null,
+    situacao,
+    risco_rede, risco_vitimas, risco_transito,
+    equipe_responsavel: document.getElementById('os-equipe').value.trim() || null,
+    equipamentos: document.getElementById('os-equip').value.trim() || null,
     status: 'aberta',
     numero_whatsapp: emergNumeroAtual(),
     aberto_por: userEmail || null,
@@ -161,17 +173,25 @@ function renderOSDetalhe() {
       <div class="li-title">${escapeHtml(r.descricao || '')} <span class="badge ${OS_STATUS_BADGE[r.status] || ''}">${OS_STATUS_LABEL[r.status] || r.status}</span></div>
       <div class="li-sub" style="margin-top:6px">📍 ${escapeHtml(r.endereco || '')}</div>
       ${r.lat ? `<div class="li-sub"><a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">Ver no mapa</a></div>` : ''}
+      ${(r.situacao || []).length ? `<div class="li-sub">Situação: ${escapeHtml(r.situacao.join(', '))}</div>` : ''}
       ${r.risco_rede ? '<div class="li-sub" style="color:var(--danger); font-weight:700; margin-top:4px">⚠️ Risco de rede elétrica</div>' : ''}
+      ${r.risco_vitimas ? '<div class="li-sub" style="color:var(--danger); font-weight:700">⚠️ Possíveis vítimas</div>' : ''}
+      ${r.risco_transito ? '<div class="li-sub" style="color:var(--danger); font-weight:700">⚠️ Trânsito afetado</div>' : ''}
+      ${r.quem_acionou ? `<div class="li-sub">Acionado por: ${escapeHtml(r.quem_acionou)}</div>` : ''}
       <div class="li-sub" style="margin-top:6px">Aberta em ${fmtDataHoraOS(r.aberto_em)}${r.aberto_por ? ' por ' + escapeHtml(r.aberto_por) : ''}</div>
+      ${r.equipe_responsavel ? `<div class="li-sub">Equipe: ${escapeHtml(r.equipe_responsavel)}</div>` : ''}
+      ${r.equipamentos ? `<div class="li-sub">Equipamentos: ${escapeHtml(r.equipamentos)}</div>` : ''}
       ${r.concluido_em ? `<div class="li-sub">Concluída em ${fmtDataHoraOS(r.concluido_em)}</div>` : ''}
-      ${r.obs_conclusao ? `<div class="li-sub">Obs. baixa: ${escapeHtml(r.obs_conclusao)}</div>` : ''}
+      ${r.obs_conclusao ? `<div class="li-sub">Serviço realizado: ${escapeHtml(r.obs_conclusao)}</div>` : ''}
+      ${r.pendencias ? `<div class="li-sub">Pendências: ${escapeHtml(r.pendencias)}</div>` : ''}
     </div>
     <div id="os-det-fotos" class="foto-strip" style="margin-bottom:12px"></div>
     <div class="btn-row">
       <button class="btn" onclick="window.open(montarLinkWhatsAppOS(osAtual()),'_blank')">📲 Reenviar WhatsApp</button>
-      ${r.status !== 'concluida' ? `<button class="btn btn-primary" onclick="abrirBaixaOS()">✔️ Dar baixa</button>` : ''}
+      <button class="btn" onclick="window.open('relatorio-os.html?id='+encodeURIComponent(r.id_os),'_blank')">📄 Gerar PDF</button>
     </div>
     <div class="btn-row">
+      ${r.status !== 'concluida' ? `<button class="btn btn-primary" onclick="abrirBaixaOS()">✔️ Dar baixa</button>` : ''}
       <button class="btn" onclick="abrirOS()">Voltar à lista</button>
     </div>`;
 }
@@ -189,6 +209,7 @@ async function renderOSFotosDetalhe(id) {
 function abrirBaixaOS() {
   showPage('os-baixa');
   document.getElementById('os-baixa-obs').value = '';
+  document.getElementById('os-baixa-pend').value = '';
   fotosForm.osb = [];
   document.querySelectorAll('#osb-fotos .foto-wrap').forEach(el => el.remove());
   window.scrollTo(0, 0);
@@ -198,7 +219,8 @@ async function confirmarBaixaOS() {
   const r = osAtual();
   if (!r) return;
   const obs_conclusao = document.getElementById('os-baixa-obs').value.trim() || null;
-  const patch = { status: 'concluida', concluido_em: agora(), obs_conclusao };
+  const pendencias = document.getElementById('os-baixa-pend').value.trim() || null;
+  const patch = { status: 'concluida', concluido_em: agora(), obs_conclusao, pendencias };
   await enqueue({ tipo: 'update', tabela: 'os_emergencial', filter: { id_os: 'eq.' + r.id_os }, patch });
   await enfileirarFotos('osb', 'os_emergencial', r.id_os, 'conclusao');
   Object.assign(r, patch);

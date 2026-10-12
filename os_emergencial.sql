@@ -29,6 +29,15 @@ create table if not exists public.os_emergencial (
 create index if not exists idx_os_emerg_criado on public.os_emergencial(criado_em desc);
 create index if not exists idx_os_emerg_status on public.os_emergencial(status);
 
+-- Campos do modelo de OS Emergencial (cabeçalho/ocorrência/atendimento/execução)
+alter table public.os_emergencial add column if not exists quem_acionou text;         -- Defesa Civil, Guarda, Bombeiros, munícipe, 156...
+alter table public.os_emergencial add column if not exists situacao jsonb;            -- ["Via totalmente obstruída", ...]
+alter table public.os_emergencial add column if not exists risco_vitimas boolean;
+alter table public.os_emergencial add column if not exists risco_transito boolean;
+alter table public.os_emergencial add column if not exists equipe_responsavel text;   -- equipe/responsável que atendeu
+alter table public.os_emergencial add column if not exists equipamentos text;         -- motosserra, caminhão, sinalização, EPIs...
+alter table public.os_emergencial add column if not exists pendencias text;           -- ex.: remoção do tronco no dia útil, acionar concessionária
+
 -- RLS: mesmas regras dos outros módulos
 --   select: autorizado · insert: coletor+ ·
 --   update/delete: editor/admin OU coletor no próprio registro
