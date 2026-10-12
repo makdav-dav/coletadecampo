@@ -83,7 +83,8 @@ async function atualizarOSOnline() {
         if (alvo) Object.assign(alvo, it.patch);
       }
     }
-    setCacheOS(rows);
+    const apagados = pend.filter(it => it.tipo === 'delete').map(it => it.filter.id_os);
+    setCacheOS(rows.filter(x => !apagados.includes('eq.' + x.id_os)));
     if (document.getElementById('page-os').classList.contains('active')) renderOSLista();
     atualizarHomeOS();
   } catch (e) { console.warn('os online:', e.message); }
@@ -203,7 +204,24 @@ function renderOSDetalhe() {
     <div class="btn-row">
       ${r.status !== 'concluida' ? `<button class="btn btn-primary" onclick="abrirBaixaOS()">✔️ Dar baixa</button>` : ''}
       <button class="btn" onclick="abrirOS()">Voltar à lista</button>
-    </div>`;
+    </div>
+    <button class="btn btn-danger-ghost" style="margin-top:16px" onclick="excluirOS()">🗑️ Excluir OS</button>`;
+}
+
+async function excluirOS() {
+  const r = osAtual();
+  if (!r) return;
+  if (!confirm(`Excluir a OS "${r.descricao || ''}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  const id = r.id_os;
+  await cancelarPendentes(it =>
+    (it.tabela === 'os_emergencial' && (it.dados?.id_os === id || it.filter?.id_os === 'eq.' + id)) ||
+    (it.tipo === 'foto' && it.entidade === 'os_emergencial' && it.idEntidade === id)
+  );
+  await enqueue({ tipo: 'delete', tabela: 'os_emergencial', filter: { id_os: 'eq.' + id } });
+  setCacheOS(cacheOS().filter(x => x.id_os !== id));
+  atualizarHomeOS();
+  showToast('OS excluída.', 'success');
+  abrirOS();
 }
 
 async function renderOSFotosDetalhe(id) {
