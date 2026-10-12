@@ -188,7 +188,7 @@ function renderOSDetalhe() {
     <div id="os-det-fotos" class="foto-strip" style="margin-bottom:12px"></div>
     <div class="btn-row">
       <button class="btn" onclick="window.open(montarLinkWhatsAppOS(osAtual()),'_blank')">📲 Reenviar WhatsApp</button>
-      <button class="btn" onclick="window.open('relatorio-os.html?id='+encodeURIComponent(r.id_os),'_blank')">📄 Gerar PDF</button>
+      <button class="btn" onclick="window.open('relatorio-os.html?id=${encodeURIComponent(r.id_os)}','_blank')">📄 Gerar PDF</button>
     </div>
     <div class="btn-row">
       ${r.status !== 'concluida' ? `<button class="btn btn-primary" onclick="abrirBaixaOS()">✔️ Dar baixa</button>` : ''}
