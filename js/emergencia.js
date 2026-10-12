@@ -73,8 +73,17 @@ async function atualizarOSOnline() {
   atualizarHomeOS();
   if (!sessionValida() || !navigator.onLine) return;
   try {
-    const rows = await sbSelect('os_emergencial', 'select=*&order=criado_em.desc&limit=100');
-    setCacheOS(rows || []);
+    const rows = (await sbSelect('os_emergencial', 'select=*&order=criado_em.desc&limit=100')) || [];
+    // o servidor ainda não tem o que está na fila: reaplica inserts/baixas pendentes
+    const pend = (await idbAll('fila')).filter(it => it.tabela === 'os_emergencial');
+    for (const it of pend) {
+      if (it.tipo === 'insert' && !rows.some(x => x.id_os === it.dados.id_os)) rows.unshift(it.dados);
+      if (it.tipo === 'update') {
+        const alvo = rows.find(x => 'eq.' + x.id_os === it.filter.id_os);
+        if (alvo) Object.assign(alvo, it.patch);
+      }
+    }
+    setCacheOS(rows);
     if (document.getElementById('page-os').classList.contains('active')) renderOSLista();
     atualizarHomeOS();
   } catch (e) { console.warn('os online:', e.message); }
@@ -144,13 +153,14 @@ async function salvarOS() {
     criado_em: agora(),
     criado_por: userEmail
   };
+  // abre antes de qualquer await: celular bloqueia pop-up fora do gesto do toque
+  window.open(montarLinkWhatsAppOS(dados), '_blank');
   await enqueue({ tipo: 'insert', tabela: 'os_emergencial', dados });
   await enfileirarFotos('os', 'os_emergencial', dados.id_os, 'abertura');
   const arr = cacheOS();
   arr.unshift(dados);
   setCacheOS(arr);
   atualizarHomeOS();
-  window.open(montarLinkWhatsAppOS(dados), '_blank');
   showToast('OS emergencial aberta.', 'success');
   abrirOSDetalhe(dados.id_os);
 }

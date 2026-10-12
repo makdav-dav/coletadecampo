@@ -100,7 +100,7 @@ async function carregar() {
     const id = P.get('id');
     if (!id) { $('wrap').innerHTML = '<div class="msg">OS não informada.</div>'; return; }
     const rows = await sbSelect('os_emergencial', 'select=*&id_os=eq.' + encodeURIComponent(id));
-    if (!rows || !rows.length) { $('wrap').innerHTML = '<div class="msg">OS não encontrada.</div>'; return; }
+    if (!rows || !rows.length) { $('wrap').innerHTML = '<div class="msg">OS ainda não sincronizada com o servidor.<br>Aguarde alguns segundos (com internet) e <a href="javascript:location.reload()">recarregue</a>. Se persistir, confira a Fila de sincronização no app.</div>'; return; }
     const r = rows[0];
     const fotos = await carregarFotos(id);
     const antes = fotos.filter(f => /abertura/i.test(f.drive_file_id));
