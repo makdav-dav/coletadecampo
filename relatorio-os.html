@@ -151,7 +151,7 @@ async function carregar() {
   }
 }
 
-const numOS = r => r.id_os.slice(0, 8).toUpperCase() + '/' + new Date(r.aberto_em || r.criado_em).getFullYear();
+const numOS = r => (r.numero || '—') + '/' + new Date(r.aberto_em || r.criado_em).getFullYear();
 const sn = v => v ? '<span class="sim">SIM</span>' : 'Não';
 const linha = (k, v) => `<tr><td class="k">${k}</td><td>${v}</td></tr>`;
 const imgs = fs => `<div class="fotos">${fs.map(f => `<img src="${esc(f.drive_file_id)}" alt="foto">`).join('')}</div>`;

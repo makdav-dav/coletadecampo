@@ -55,6 +55,9 @@ function abrirOS() { showPage('os'); renderOSLista(); atualizarOSOnline(); }
 
 function fmtDataHoraOS(iso) { try { return new Date(iso).toLocaleString('pt-BR'); } catch (e) { return ''; } }
 
+// número vem do banco (sequência); antes de sincronizar ainda não existe
+function numOS(r) { return r && r.numero ? `${r.numero}/${new Date(r.aberto_em || r.criado_em).getFullYear()}` : null; }
+
 function renderOSLista() {
   const arr = cacheOS();
   const el = document.getElementById('os-lista');
@@ -62,7 +65,7 @@ function renderOSLista() {
   el.innerHTML = arr.map(r => `
     <div class="list-item" onclick="abrirOSDetalhe('${r.id_os}')">
       <div class="li-main">
-        <div class="li-title">${escapeHtml(r.descricao || '(sem descrição)')}</div>
+        <div class="li-title">${numOS(r) ? 'Nº ' + numOS(r) + ' · ' : ''}${escapeHtml(r.descricao || '(sem descrição)')}</div>
         <div class="li-sub">${escapeHtml(r.endereco || '')}${r.aberto_em ? ' · ' + fmtDataHoraOS(r.aberto_em) : ''}</div>
       </div>
       <span class="badge ${OS_STATUS_BADGE[r.status] || ''}">${OS_STATUS_LABEL[r.status] || r.status}</span>
@@ -112,7 +115,7 @@ function novaOS() {
 
 function montarLinkWhatsAppOS(dados) {
   const linhas = [
-    '🚨 *OS EMERGENCIAL*',
+    '🚨 *OS EMERGENCIAL*' + (numOS(dados) ? ' *Nº ' + numOS(dados) + '*' : ''),
     dados.descricao || '(sem descrição)',
     '📍 ' + (dados.endereco || 'endereço não informado')
   ];
@@ -173,6 +176,14 @@ function abrirOSDetalhe(id) {
   showPage('os-detalhe');
   renderOSDetalhe();
   renderOSFotosDetalhe(id);
+  const r = osAtual();
+  if (r && !r.numero) {
+    // OS recém-criada: espera a fila subir e busca o número gerado pelo banco
+    setTimeout(async () => {
+      await atualizarOSOnline();
+      if (osAtualId === id && document.getElementById('page-os-detalhe').classList.contains('active')) renderOSDetalhe();
+    }, 4000);
+  }
 }
 
 function renderOSDetalhe() {
@@ -181,6 +192,7 @@ function renderOSDetalhe() {
   if (!r) { el.innerHTML = '<div class="empty">OS não encontrada.</div><div class="btn-row"><button class="btn" onclick="abrirOS()">Voltar à lista</button></div>'; return; }
   el.innerHTML = `
     <div class="card">
+      <div class="li-sub" style="font-weight:700; margin-bottom:4px">${numOS(r) ? 'OS Emergencial nº ' + numOS(r) : 'Nº da OS: aguardando sincronização…'}</div>
       <div class="li-title">${escapeHtml(r.descricao || '')} <span class="badge ${OS_STATUS_BADGE[r.status] || ''}">${OS_STATUS_LABEL[r.status] || r.status}</span></div>
       <div class="li-sub" style="margin-top:6px">📍 ${escapeHtml(r.endereco || '')}</div>
       ${r.lat ? `<div class="li-sub"><a href="https://www.google.com/maps?q=${r.lat},${r.lng}" target="_blank" rel="noopener">Ver no mapa</a></div>` : ''}
