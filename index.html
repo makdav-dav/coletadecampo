@@ -68,6 +68,20 @@
     <div><div class="action-title">Fila de sincronização</div><div class="action-desc" id="home-fila-desc">Nenhum registro pendente</div></div>
   </div>
 
+  <!-- Plantão emergencial (fds/fora do horário) -->
+  <div class="home-sec-title">Plantão emergencial</div>
+  <div class="card action-card" onclick="abrirOS()">
+    <div class="action-icon" style="background:var(--danger-light); color:var(--danger); font-size:22px">🚨</div>
+    <div><div class="action-title">OS Emergencial</div><div class="action-desc" id="home-os-desc">Nenhuma OS em aberto</div></div>
+  </div>
+  <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div>
+      <div class="action-title">Equipe de plantão</div>
+      <div class="action-desc">WhatsApp: <span id="emerg-numero-atual">—</span></div>
+    </div>
+    <button class="btn btn-sm" onclick="configurarNumeroEmergencia()">⚙️ Configurar</button>
+  </div>
+
   <!-- Painéis de gestão (páginas de acompanhamento — exigem login autorizado) -->
   <div class="home-sec-title">Painéis de gestão <span class="tag">acesso restrito</span></div>
   <div class="hub-links">
@@ -703,6 +717,92 @@
   </div>
 </section>
 
+<!-- ============ OS EMERGENCIAL: LISTA ============ -->
+<section class="page" id="page-os">
+  <h2>OS Emergencial</h2>
+  <div class="page-sub">Acionamento de equipe terceira fora do horário comercial / fins de semana.</div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="novaOS()">+ Nova OS</button>
+  </div>
+  <div id="os-lista" style="margin-top:12px"></div>
+  <div class="btn-row" style="margin-top:14px">
+    <button class="btn" onclick="showPage('home')">Voltar ao início</button>
+  </div>
+</section>
+
+<!-- ============ OS EMERGENCIAL: FORMULÁRIO ============ -->
+<section class="page" id="page-os-form">
+  <div class="sticky-lev" style="background:var(--danger)">
+    <div>
+      <div class="sl-rua">Nova OS Emergencial</div>
+      <div class="sl-sub">Queda de árvore / desobstrução de via</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>O que aconteceu</label>
+    <textarea id="os-desc" placeholder="Ex.: árvore caída obstruindo totalmente a via"></textarea>
+    <label>Endereço</label><input type="text" id="os-end" placeholder="Rua, nº, bairro, ponto de referência">
+    <div class="gps-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s6-5.1 6-10a6 6 0 1 0-12 0c0 4.9 6 10 6 10z"/><circle cx="12" cy="11" r="2.5"/></svg>
+      <div class="gps-txt">
+        <div id="os-gps-status">GPS não capturado</div>
+        <div class="gps-coord" id="os-gps-coord"></div>
+      </div>
+      <button class="btn btn-sm" style="width:auto" onclick="capturarGPS('os')">Capturar</button>
+    </div>
+    <div class="chips" style="margin-top:12px">
+      <span class="chip" id="os-rede" onclick="this.classList.toggle('on')">⚠️ Risco de rede elétrica (fio envolvido)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>Fotos (opcional)</label>
+    <div class="foto-strip" id="os-fotos">
+      <button class="foto-add" onclick="document.getElementById('os-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="os-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'os')">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="salvarOS()">Salvar e enviar no WhatsApp</button>
+    <button class="btn" onclick="abrirOS()">Cancelar</button>
+  </div>
+</section>
+
+<!-- ============ OS EMERGENCIAL: DETALHE ============ -->
+<section class="page" id="page-os-detalhe">
+  <h2>OS Emergencial</h2>
+  <div id="os-det-corpo"></div>
+</section>
+
+<!-- ============ OS EMERGENCIAL: BAIXA ============ -->
+<section class="page" id="page-os-baixa">
+  <h2>Dar baixa na OS</h2>
+  <div class="page-sub">Registre como o atendimento foi concluído.</div>
+  <div class="card">
+    <label>Observações da conclusão</label>
+    <textarea id="os-baixa-obs" placeholder="Ex.: via desobstruída, tronco removido, destinação do resíduo"></textarea>
+  </div>
+  <div class="card">
+    <label>Fotos da conclusão (opcional)</label>
+    <div class="foto-strip" id="osb-fotos">
+      <button class="foto-add" onclick="document.getElementById('osb-file').click()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Foto
+      </button>
+    </div>
+    <input type="file" id="osb-file" accept="image/*" capture="environment" style="display:none" onchange="addFoto(this,'osb')">
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="confirmarBaixaOS()">✔️ Confirmar baixa</button>
+    <button class="btn" onclick="abrirOSDetalhe(osAtualId)">Cancelar</button>
+  </div>
+</section>
+
 <!-- ============ CONSULTA ============ -->
 <section class="page" id="page-consulta">
   <h2>Consulta</h2>
@@ -802,6 +902,7 @@
 <script src="js/jardinagem.js"></script>
 <script src="js/horto.js"></script>
 <script src="js/risco.js"></script>
+<script src="js/emergencia.js"></script>
 <script src="js/importacao.js"></script>
 <script src="js/consulta.js"></script>
 <script src="js/painel-dash.js"></script>
