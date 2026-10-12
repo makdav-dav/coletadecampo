@@ -113,7 +113,7 @@ function novaOS() {
   window.scrollTo(0, 0);
 }
 
-function montarLinkWhatsAppOS(dados) {
+function montarMsgOS(dados) {
   const linhas = [
     '🚨 *OS EMERGENCIAL*' + (numOS(dados) ? ' *Nº ' + numOS(dados) + '*' : ''),
     dados.descricao || '(sem descrição)',
@@ -126,10 +126,39 @@ function montarLinkWhatsAppOS(dados) {
   if (dados.risco_transito) linhas.push('⚠️ Trânsito afetado.');
   if (dados.quem_acionou) linhas.push('Acionado por: ' + dados.quem_acionou);
   linhas.push('Acionado em ' + fmtDataHoraOS(dados.aberto_em || agora()));
-  const msg = linhas.join('\n');
-  const numero = (dados.numero_whatsapp || emergNumeroAtual()).replace(/\D/g, '');
-  return 'https://wa.me/55' + numero + '?text=' + encodeURIComponent(msg);
+  if (dados.status === 'concluida') linhas.push('✅ Concluída em ' + fmtDataHoraOS(dados.concluido_em));
+  return linhas.join('\n');
 }
+
+function montarLinkWhatsAppOS(dados) {
+  const numero = (dados.numero_whatsapp || emergNumeroAtual()).replace(/\D/g, '');
+  return 'https://wa.me/55' + numero + '?text=' + encodeURIComponent(montarMsgOS(dados));
+}
+
+/* Grava direto no banco para receber o número da OS na hora.
+   Sem internet/sessão (ou se falhar) a OS segue pela fila, como os outros módulos. */
+async function inserirOSDireto(dados) {
+  if (!sessionValida() || !navigator.onLine) return false;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/os_emergencial?select=numero', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(limparPayload(dados))
+    });
+    if (!r.ok) throw new Error(await r.text().catch(() => 'HTTP ' + r.status));
+    const j = await r.json();
+    if (j && j[0] && j[0].numero) dados.numero = j[0].numero;
+    return true;
+  } catch (e) {
+    console.warn('OS direto falhou, vai pela fila:', e.message);
+    return false;
+  } finally { clearTimeout(t); }
+}
+
+// fotos recém-tiradas ficam em memória para entrar no PDF antes de terminar o upload
+const fotosLocaisOS = {};
 
 async function salvarOS() {
   const descricao = document.getElementById('os-desc').value.trim();
@@ -157,16 +186,81 @@ async function salvarOS() {
     criado_em: agora(),
     criado_por: userEmail
   };
-  // abre antes de qualquer await: celular bloqueia pop-up fora do gesto do toque
-  window.open(montarLinkWhatsAppOS(dados), '_blank');
-  await enqueue({ tipo: 'insert', tabela: 'os_emergencial', dados });
-  await enfileirarFotos('os', 'os_emergencial', dados.id_os, 'abertura');
-  const arr = cacheOS();
-  arr.unshift(dados);
-  setCacheOS(arr);
-  atualizarHomeOS();
-  showToast('OS emergencial aberta.', 'success');
-  abrirOSDetalhe(dados.id_os);
+  const btn = document.getElementById('os-btn-salvar');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    fotosLocaisOS[dados.id_os] = { antes: fotosForm.os.map(f => f.blob), depois: [] };
+    if (!(await inserirOSDireto(dados))) await enqueue({ tipo: 'insert', tabela: 'os_emergencial', dados });
+    await enfileirarFotos('os', 'os_emergencial', dados.id_os, 'abertura');
+    const arr = cacheOS();
+    arr.unshift(dados);
+    setCacheOS(arr);
+    atualizarHomeOS();
+    showToast(dados.numero ? `OS nº ${numOS(dados)} aberta. Envie para a equipe.` : 'OS salva. O número sai quando sincronizar.', 'success');
+    abrirOSDetalhe(dados.id_os);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar e gerar OS';
+  }
+}
+
+/* ── PDF + envio ── */
+let pdfOS = null;   // { chave, file, erro }
+
+async function fotosParaPdf(r) {
+  const local = fotosLocaisOS[r.id_os] || { antes: [], depois: [] };
+  let srv = [];
+  if (sessionValida() && navigator.onLine) {
+    try { srv = ((await carregarFotos('os_emergencial', [r.id_os]))[r.id_os] || []).map(f => f.drive_file_id); } catch (e) {}
+  }
+  const antes = srv.filter(u => /abertura/i.test(u)), depois = srv.filter(u => /conclusao/i.test(u));
+  return { antes: antes.length ? antes : local.antes, depois: depois.length ? depois : local.depois };
+}
+
+async function prepararPdfOS(r) {
+  const chave = JSON.stringify(r);
+  if (pdfOS && pdfOS.chave === chave) return pintarBotoesPdf();
+  pdfOS = { chave, file: null, erro: null };
+  pintarBotoesPdf();
+  try {
+    const blob = await gerarPdfOS(r, await fotosParaPdf(r));
+    if (pdfOS.chave === chave) pdfOS.file = new File([blob], nomeArquivoPdfOS(r), { type: 'application/pdf' });
+  } catch (e) {
+    if (pdfOS.chave === chave) pdfOS.erro = e.message;
+  }
+  pintarBotoesPdf();
+}
+
+function pintarBotoesPdf() {
+  const b = document.getElementById('os-btn-enviar');
+  if (!b) return;
+  const pronto = pdfOS && pdfOS.file;
+  b.disabled = !pronto;
+  b.textContent = pronto ? '📲 Enviar no WhatsApp com PDF' : (pdfOS && pdfOS.erro ? '⚠️ Erro ao gerar PDF' : '⏳ Preparando PDF…');
+  const d = document.getElementById('os-btn-baixar');
+  if (d) d.disabled = !pronto;
+}
+
+function baixarPdfOS() {
+  if (!pdfOS || !pdfOS.file) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(pdfOS.file); a.download = pdfOS.file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// sem await antes do share: o celular só abre o compartilhamento dentro do gesto do toque
+function enviarOSWhatsApp() {
+  const r = osAtual();
+  if (!r || !pdfOS || !pdfOS.file) return;
+  const texto = montarMsgOS(r);
+  if (navigator.canShare && navigator.canShare({ files: [pdfOS.file] })) {
+    navigator.share({ files: [pdfOS.file], text: texto, title: 'OS Emergencial ' + (numOS(r) || '') })
+      .catch(e => { if (e.name !== 'AbortError') showToast('Não foi possível compartilhar: ' + e.message, 'error'); });
+    return;
+  }
+  // computador / navegador sem compartilhamento de arquivo: baixa o PDF e abre a conversa
+  baixarPdfOS();
+  window.open(montarLinkWhatsAppOS(r), '_blank');
+  showToast('PDF baixado — anexe na conversa do WhatsApp que abriu.', 'info');
 }
 
 function osAtual() { return cacheOS().find(r => r.id_os === osAtualId); }
@@ -177,13 +271,20 @@ function abrirOSDetalhe(id) {
   renderOSDetalhe();
   renderOSFotosDetalhe(id);
   const r = osAtual();
-  if (r && !r.numero) {
-    // OS recém-criada: espera a fila subir e busca o número gerado pelo banco
-    setTimeout(async () => {
-      await atualizarOSOnline();
-      if (osAtualId === id && document.getElementById('page-os-detalhe').classList.contains('active')) renderOSDetalhe();
-    }, 4000);
-  }
+  if (r && !r.numero) aguardarNumeroOS(id, 8);
+}
+
+// OS que foi pela fila: tenta buscar o número gerado pelo banco enquanto a tela estiver aberta
+function aguardarNumeroOS(id, tentativas) {
+  setTimeout(async () => {
+    const naTela = () => osAtualId === id && document.getElementById('page-os-detalhe').classList.contains('active');
+    if (!naTela()) return;
+    await atualizarOSOnline();
+    if (!naTela()) return;
+    const r = osAtual();
+    if (r && r.numero) renderOSDetalhe();
+    else if (tentativas > 1) aguardarNumeroOS(id, tentativas - 1);
+  }, 5000);
 }
 
 function renderOSDetalhe() {
@@ -209,15 +310,18 @@ function renderOSDetalhe() {
       ${r.pendencias ? `<div class="li-sub">Pendências: ${escapeHtml(r.pendencias)}</div>` : ''}
     </div>
     <div id="os-det-fotos" class="foto-strip" style="margin-bottom:12px"></div>
-    <div class="btn-row">
-      <button class="btn" onclick="window.open(montarLinkWhatsAppOS(osAtual()),'_blank')">📲 Reenviar WhatsApp</button>
-      <button class="btn" onclick="window.open('relatorio-os.html?id=${encodeURIComponent(r.id_os)}','_blank')">📄 Gerar PDF</button>
+    ${r.numero ? '' : '<div class="page-sub" style="margin:0 0 6px">Sem internet ou ainda sincronizando: o PDF sai sem número até a OS chegar ao servidor.</div>'}
+    <button class="btn btn-primary" id="os-btn-enviar" onclick="enviarOSWhatsApp()" disabled>⏳ Preparando PDF…</button>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn" id="os-btn-baixar" onclick="baixarPdfOS()" disabled>⬇️ Baixar PDF</button>
+      <button class="btn" onclick="window.open(montarLinkWhatsAppOS(osAtual()),'_blank')">💬 Só mensagem</button>
     </div>
     <div class="btn-row">
       ${r.status !== 'concluida' ? `<button class="btn btn-primary" onclick="abrirBaixaOS()">✔️ Dar baixa</button>` : ''}
       <button class="btn" onclick="abrirOS()">Voltar à lista</button>
     </div>
     <button class="btn btn-danger-ghost" style="margin-top:16px" onclick="excluirOS()">🗑️ Excluir OS</button>`;
+  prepararPdfOS(r);
 }
 
 async function excluirOS() {
@@ -262,6 +366,7 @@ async function confirmarBaixaOS() {
   const pendencias = document.getElementById('os-baixa-pend').value.trim() || null;
   const patch = { status: 'concluida', concluido_em: agora(), obs_conclusao, pendencias };
   await enqueue({ tipo: 'update', tabela: 'os_emergencial', filter: { id_os: 'eq.' + r.id_os }, patch });
+  (fotosLocaisOS[r.id_os] = fotosLocaisOS[r.id_os] || { antes: [], depois: [] }).depois = fotosForm.osb.map(f => f.blob);
   await enfileirarFotos('osb', 'os_emergencial', r.id_os, 'conclusao');
   Object.assign(r, patch);
   setCacheOS(cacheOS().map(x => x.id_os === r.id_os ? r : x));

@@ -6,7 +6,7 @@
    direto, sem cache.
    Suba a versão do cache (v1 → v2 …) quando quiser forçar limpeza.
    ================================================================ */
-const CACHE = 'coleta-campo-v4';
+const CACHE = 'coleta-campo-v5';
 
 const ASSETS = [
   './',
@@ -26,6 +26,10 @@ const ASSETS = [
   './js/horto.js',
   './js/risco.js',
   './js/emergencia.js',
+  './js/os-pdf.js',
+  './js/vendor/jspdf.umd.min.js',
+  './js/vendor/jspdf.plugin.autotable.min.js',
+  './timbre-campo-largo.jpg',
   './js/importacao.js',
   './js/consulta.js',
   './js/painel-dash.js',
